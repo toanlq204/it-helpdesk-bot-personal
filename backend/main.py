@@ -95,8 +95,24 @@ def chat(req: ChatRequest):
 
             if msg.tool_calls:
                 # Model requests function call(s)
-                messages.append(
-                    {"role": "assistant", "content": msg.content or "", "tool_calls": []})
+                # Convert tool calls to dict format for messages
+                tool_calls_dict = []
+                for tc in msg.tool_calls:
+                    tool_calls_dict.append({
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments
+                        }
+                    })
+
+                messages.append({
+                    "role": "assistant",
+                    "content": msg.content or "",
+                    "tool_calls": tool_calls_dict
+                })
+
                 for tool_call in msg.tool_calls:
                     name = tool_call.function.name
                     arguments = tool_call.function.arguments
