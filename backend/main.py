@@ -3,7 +3,7 @@ import os
 import re
 from typing import Dict, List, Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .models import ChatRequest, ChatResponse, ChatMessage
@@ -62,72 +62,79 @@ def split_into_subqueries(user_text: str) -> List[str]:
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
     """Main chat endpoint that handles user messages and tool calls"""
-    client = get_client()
+    try:
+        client = get_client()
 
-    # Get server-side history to ensure context management
-    messages = get_session_messages(req.session_id)
+        # Get server-side history to ensure context management
+        messages = get_session_messages(req.session_id)
 
-    # Batching: if user sends multiple questions, wrap them in a meta-prompt
-    subqs = split_into_subqueries(req.message)
-    if len(subqs) > 1:
-        user_payload = "The user has multiple questions:\n" + \
-            "\n".join([f"- {q}" for q in subqs])
-    else:
-        user_payload = req.message
-
-    messages.append({"role": "user", "content": user_payload})
-
-    tools = get_tools_schema()
-
-    # Loop to handle tool calls until model doesn't request tools anymore
-    MAX_TOOL_TURNS = 4
-    tool_turns = 0
-    while tool_turns < MAX_TOOL_TURNS:
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=messages,
-            tools=tools,
-            tool_choice="auto",
-            temperature=0.2,
-        )
-        msg = completion.choices[0].message
-
-        if msg.tool_calls:
-            # Model requests function call(s)
-            messages.append(
-                {"role": "assistant", "content": msg.content or "", "tool_calls": []})
-            for tool_call in msg.tool_calls:
-                name = tool_call.function.name
-                arguments = tool_call.function.arguments
-                result = call_tool_by_name(name, arguments)
-                # Push function result to model
-                messages.append({
-                    "role": "tool",
-                    "content": result,
-                    "tool_call_id": tool_call.id
-                })
-            tool_turns += 1
-            continue
+        # Batching: if user sends multiple questions, wrap them in a meta-prompt
+        subqs = split_into_subqueries(req.message)
+        if len(subqs) > 1:
+            user_payload = "The user has multiple questions:\n" + \
+                "\n".join([f"- {q}" for q in subqs])
         else:
-            # No more tool calls → this is the final answer
-            assistant_text = msg.content or "I'm here to help."
-            messages.append({"role": "assistant", "content": assistant_text})
-            break
+            user_payload = req.message
 
-    # Trim overly long history (keep system + 16 recent turns)
-    if len(messages) > 34:
-        SESSIONS[req.session_id] = [messages[0]] + messages[-33:]
+        messages.append({"role": "user", "content": user_payload})
 
-    # Create payload to return to frontend
-    history_for_client: List[ChatMessage] = [
-        ChatMessage(role=m["role"], content=m.get("content", "") or "")
-        for m in messages if m["role"] in ("user", "assistant")
-    ]
-    return ChatResponse(
-        reply=history_for_client[-1].content if history_for_client else "",
-        messages=history_for_client,
-        tickets=ticket_data,
-    )
+        tools = get_tools_schema()
+
+        # Loop to handle tool calls until model doesn't request tools anymore
+        MAX_TOOL_TURNS = 4
+        tool_turns = 0
+        while tool_turns < MAX_TOOL_TURNS:
+            completion = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto",
+                temperature=0.2,
+            )
+            msg = completion.choices[0].message
+
+            if msg.tool_calls:
+                # Model requests function call(s)
+                messages.append(
+                    {"role": "assistant", "content": msg.content or "", "tool_calls": []})
+                for tool_call in msg.tool_calls:
+                    name = tool_call.function.name
+                    arguments = tool_call.function.arguments
+                    result = call_tool_by_name(name, arguments)
+                    # Push function result to model
+                    messages.append({
+                        "role": "tool",
+                        "content": result,
+                        "tool_call_id": tool_call.id
+                    })
+                tool_turns += 1
+                continue
+            else:
+                # No more tool calls → this is the final answer
+                assistant_text = msg.content or "I'm here to help."
+                messages.append(
+                    {"role": "assistant", "content": assistant_text})
+                break
+
+        # Trim overly long history (keep system + 16 recent turns)
+        if len(messages) > 34:
+            SESSIONS[req.session_id] = [messages[0]] + messages[-33:]
+
+        # Create payload to return to frontend
+        history_for_client: List[ChatMessage] = [
+            ChatMessage(role=m["role"], content=m.get("content", "") or "")
+            for m in messages if m["role"] in ("user", "assistant")
+        ]
+        return ChatResponse(
+            reply=history_for_client[-1].content if history_for_client else "",
+            messages=history_for_client,
+            tickets=ticket_data,
+        )
+
+    except Exception as e:
+        print(f"Error in chat endpoint: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @app.get("/health")
