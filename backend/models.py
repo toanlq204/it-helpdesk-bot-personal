@@ -19,10 +19,12 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    """Response model for chat endpoint"""
+    """Enhanced response model for chat endpoint"""
     reply: str
     messages: List[ChatMessage]
     tickets: Optional[List[Dict[str, Any]]] = None
+    stats: Optional[Dict[str, Any]] = None  # Enhanced ticket statistics
+    context: Optional[Dict[str, Any]] = None  # Conversation context info
 
 
 class ToolCallResult(BaseModel):

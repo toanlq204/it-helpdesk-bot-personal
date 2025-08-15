@@ -6,11 +6,12 @@ import { sendMessage, health } from "./api.js";
 export default function App() {
     // State for managing chat messages
     const [messages, setMessages] = useState([
-        { role: "assistant", content: "Hello there! 👋 Welcome to your IT Helpdesk Assistant! \n\nI'm here to help you with all your tech questions and issues. Whether you need help with:\n\n🔐 Password resets\n📧 Email and Outlook setup\n🌐 VPN connections\n💻 Software installations\n🔧 Technical troubleshooting\n\nJust ask me anything, and I'll do my best to assist you! Feel free to ask multiple questions at once too. How can I help you today?" }
+        { role: "assistant", content: "Hello there! 👋 Welcome to your **Enhanced IT Helpdesk Assistant**! \n\n🚀 **New Advanced Features:**\n\n🔍 **Smart Knowledge Base Search** - Get detailed troubleshooting guides\n🛠️ **Interactive Troubleshooting** - Step-by-step guidance for Wi-Fi, printers, and email\n🎫 **Enhanced Ticket Management** - Auto-categorized tickets with priority levels\n🧠 **Context Memory** - I remember our conversation and handle follow-ups\n📦 **Batch Processing** - Ask multiple questions at once!\n\n� **Try asking:**\n• \"How to fix slow Wi-Fi? Also, how do I reset my password?\"\n• \"Start troubleshooting my printer issues\"\n• \"Search knowledge base for VPN problems\"\n• \"Create a ticket for my broken laptop screen\"\n• \"Show me all my tickets\"\n\nHow can I help you today?" }
     ]);
     const [input, setInput] = useState("");
     const [serverHealth, setServerHealth] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [ticketStats, setTicketStats] = useState(null);
 
     // Generate or retrieve session ID from localStorage
     const sessionId = useMemo(() => {
@@ -29,6 +30,7 @@ export default function App() {
             try {
                 const h = await health();
                 setServerHealth(h);
+                setTicketStats(h.tickets_total || 0);
             } catch {
                 setServerHealth({ status: "offline" });
             }
@@ -46,6 +48,11 @@ export default function App() {
             const res = await sendMessage(sessionId, text);
             // Server returns full history (user + assistant). We only add the new assistant message:
             setMessages((prev) => [...prev, { role: "assistant", content: res.reply }]);
+
+            // Update ticket stats if provided in response
+            if (res.stats) {
+                setTicketStats(res.stats.total || 0);
+            }
         } catch (e) {
             setMessages((prev) => [
                 ...prev,
@@ -83,19 +90,27 @@ export default function App() {
                                 </svg>
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-white">IT Helpdesk Assistant</h1>
-                                <p className="text-blue-200 text-sm">Your friendly tech support companion</p>
+                                <h1 className="text-2xl font-bold text-white">Enhanced IT Helpdesk Assistant</h1>
+                                <p className="text-blue-200 text-sm">Advanced AI support with context memory & smart troubleshooting</p>
                             </div>
                         </div>
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl shadow-lg transition-all duration-300 ${serverHealth?.status === "ok"
+                        <div className="flex items-center gap-4">
+                            {/* Ticket Stats Display */}
+                            {ticketStats !== null && (
+                                <div className="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1 rounded-lg text-sm">
+                                    🎫 {ticketStats} tickets
+                                </div>
+                            )}
+                            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl shadow-lg transition-all duration-300 ${serverHealth?.status === "ok"
                                 ? "bg-green-500/20 text-green-300 border border-green-500/30"
                                 : "bg-red-500/20 text-red-300 border border-red-500/30"
-                            }`}>
-                            <div className={`w-2 h-2 rounded-full ${serverHealth?.status === "ok" ? "bg-green-400 animate-pulse-custom" : "bg-red-400"
-                                }`}></div>
-                            <span className="text-sm font-medium">
-                                {serverHealth?.status === "ok" ? "Online" : "Offline"}
-                            </span>
+                                }`}>
+                                <div className={`w-2 h-2 rounded-full ${serverHealth?.status === "ok" ? "bg-green-400 animate-pulse-custom" : "bg-red-400"
+                                    }`}></div>
+                                <span className="text-sm font-medium">
+                                    {serverHealth?.status === "ok" ? "Enhanced Mode" : "Offline"}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -112,7 +127,7 @@ export default function App() {
                             <textarea
                                 className="w-full rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 p-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300 resize-none"
                                 rows={2}
-                                placeholder="💬 Ask about VPN, Outlook, password reset... Type your question here!"
+                                placeholder="💬 Try: 'How to reset password? Also, start Wi-Fi troubleshooting' or 'Create ticket for broken printer'"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={onKey}
@@ -160,8 +175,8 @@ export default function App() {
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm font-medium">💡 Quick tip:</p>
-                            <p className="text-xs opacity-75">Try asking "How to reset my password? Also, how to install Outlook?" - I can handle multiple questions at once!</p>
+                            <p className="text-sm font-medium">� Enhanced Features Active:</p>
+                            <p className="text-xs opacity-75">Smart troubleshooting • Context memory • Batch questions • Auto-categorized tickets • Knowledge base search</p>
                         </div>
                     </div>
                 </footer>
