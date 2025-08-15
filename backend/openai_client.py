@@ -1,17 +1,21 @@
-import openai
-from mock_data import faq_data, software_list
+# Import necessary modules for Azure OpenAI client
+import os
+from openai import AzureOpenAI
+
+# Set environment variables before running:
+# AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_VERSION (optional)
+# MODEL_NAME (e.g., "gpt-4o-mini")
 
 
-def call_openai_api(user_message, conversation_history):
-    openai.api_key = "your-azure-openai-key"
-    response = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        messages=conversation_history +
-        [{"role": "user", "content": user_message}],
-        functions=[
-            {"name": "get_faq_answer", "parameters": {"question": "string"}},
-            {"name": "create_ticket", "parameters": {"issue": "string"}},
-            {"name": "get_software_info", "parameters": {"name": "string"}}
-        ]
+def get_client():
+    """Create and return an Azure OpenAI client instance"""
+    return AzureOpenAI(
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION",
+                              "2024-07-01-preview"),
     )
-    return response.choices[0].message.content
+
+
+# Get the model name from environment variable with default fallback
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")

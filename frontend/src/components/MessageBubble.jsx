@@ -1,17 +1,15 @@
-import React from 'react';
-
-function MessageBubble({ role, content }) {
-    const isUser = role === 'user';
+// Component for rendering individual chat message bubbles
+export default function MessageBubble({ role, content }) {
+    const isUser = role === "user";
     return (
-        <div className={`mb-2 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+        <div className={`flex ${isUser ? "justify-end" : "justify-start"} my-2`}>
             <div
-                className={`p-2 rounded-lg max-w-xs ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'
-                    }`}
+                className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed shadow
+          ${isUser ? "bg-blue-600 text-white rounded-br-sm" : "bg-gray-800 text-gray-100 rounded-bl-sm"}
+        `}
             >
                 {content}
             </div>
         </div>
     );
 }
-
-export default MessageBubble;
