@@ -1,10 +1,12 @@
+
 # Import necessary modules for Azure OpenAI client
 import os
 from openai import AzureOpenAI
+from dotenv import load_dotenv
 
-# Set environment variables before running:
-# AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_VERSION (optional)
-# MODEL_NAME (e.g., "gpt-4o-mini")
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 def get_client():
