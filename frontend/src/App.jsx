@@ -6,7 +6,7 @@ import { sendMessage, health } from "./api.js";
 export default function App() {
     // State for managing chat messages
     const [messages, setMessages] = useState([
-        { role: "assistant", content: "Hi! I'm your IT Helpdesk assistant. How can I help you today?" }
+        { role: "assistant", content: "Hello there! 👋 Welcome to your IT Helpdesk Assistant! \n\nI'm here to help you with all your tech questions and issues. Whether you need help with:\n\n🔐 Password resets\n📧 Email and Outlook setup\n🌐 VPN connections\n💻 Software installations\n🔧 Technical troubleshooting\n\nJust ask me anything, and I'll do my best to assist you! Feel free to ask multiple questions at once too. How can I help you today?" }
     ]);
     const [input, setInput] = useState("");
     const [serverHealth, setServerHealth] = useState(null);
@@ -38,7 +38,7 @@ export default function App() {
     // Handle sending a message
     const onSend = async () => {
         const text = input.trim();
-        if (!text) return;
+        if (!text || loading) return;
         setMessages((prev) => [...prev, { role: "user", content: text }]);
         setInput("");
         setLoading(true);
@@ -49,7 +49,7 @@ export default function App() {
         } catch (e) {
             setMessages((prev) => [
                 ...prev,
-                { role: "assistant", content: "Sorry, the server is unavailable right now." }
+                { role: "assistant", content: "Sorry, the server is unavailable right now. Please try again later. 😔" }
             ]);
         } finally {
             setLoading(false);
@@ -64,37 +64,106 @@ export default function App() {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-4">
-            <div className="w-full max-w-3xl flex flex-col gap-3">
-                <header className="flex items-center justify-between">
-                    <h1 className="text-xl font-semibold">IT Helpdesk Bot</h1>
-                    <div className={`text-xs px-2 py-1 rounded ${serverHealth?.status === "ok" ? "bg-green-700" : "bg-red-700"}`}>
-                        {serverHealth?.status === "ok" ? "API Online" : "API Offline"}
+        <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background decorative elements */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse-custom"></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse-custom" style={{ animationDelay: '1s' }}></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse-custom" style={{ animationDelay: '2s' }}></div>
+            </div>
+
+            <div className="w-full max-w-4xl flex flex-col gap-6 relative z-10 animate-fadeInUp">
+                {/* Header with improved design */}
+                <header className="glass rounded-2xl p-6 shadow-2xl">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-white">IT Helpdesk Assistant</h1>
+                                <p className="text-blue-200 text-sm">Your friendly tech support companion</p>
+                            </div>
+                        </div>
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl shadow-lg transition-all duration-300 ${serverHealth?.status === "ok"
+                                ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                                : "bg-red-500/20 text-red-300 border border-red-500/30"
+                            }`}>
+                            <div className={`w-2 h-2 rounded-full ${serverHealth?.status === "ok" ? "bg-green-400 animate-pulse-custom" : "bg-red-400"
+                                }`}></div>
+                            <span className="text-sm font-medium">
+                                {serverHealth?.status === "ok" ? "Online" : "Offline"}
+                            </span>
+                        </div>
                     </div>
                 </header>
 
-                <ChatWindow messages={messages} />
-
-                <div className="flex gap-2">
-                    <textarea
-                        className="flex-1 rounded-xl bg-gray-800 border border-gray-700 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-                        rows={2}
-                        placeholder="Ask about VPN, Outlook, password reset... You can ask multiple questions at once."
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={onKey}
-                    />
-                    <button
-                        className="rounded-xl px-4 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-60"
-                        onClick={onSend}
-                        disabled={loading}
-                    >
-                        {loading ? "Sending..." : "Send"}
-                    </button>
+                {/* Chat Window with enhanced styling */}
+                <div className="glass-dark rounded-2xl p-2 shadow-2xl" style={{ height: '500px' }}>
+                    <ChatWindow messages={messages} loading={loading} />
                 </div>
 
-                <footer className="text-xs text-gray-400">
-                    Tips: Try asking “How to reset my password? Also, how to install Outlook?”
+                {/* Input area with improved design */}
+                <div className="glass rounded-2xl p-4 shadow-2xl">
+                    <div className="flex gap-4">
+                        <div className="flex-1 relative">
+                            <textarea
+                                className="w-full rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 p-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300 resize-none"
+                                rows={2}
+                                placeholder="💬 Ask about VPN, Outlook, password reset... Type your question here!"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={onKey}
+                                disabled={loading}
+                            />
+                            {input.length > 0 && (
+                                <div className="absolute bottom-2 right-2 text-xs text-blue-300">
+                                    Press Enter to send
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            className={`btn-primary rounded-xl px-8 py-4 text-white font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-w-[100px] flex items-center justify-center gap-2 ${loading ? 'animate-pulse' : ''
+                                }`}
+                            onClick={onSend}
+                            disabled={loading || !input.trim()}
+                        >
+                            {loading ? (
+                                <>
+                                    <div className="typing-indicator">
+                                        <div className="typing-dot"></div>
+                                        <div className="typing-dot"></div>
+                                        <div className="typing-dot"></div>
+                                    </div>
+                                    <span>Sending</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                    </svg>
+                                    Send
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Enhanced footer with tips */}
+                <footer className="glass rounded-xl p-4 shadow-lg">
+                    <div className="flex items-center gap-3 text-blue-200">
+                        <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium">💡 Quick tip:</p>
+                            <p className="text-xs opacity-75">Try asking "How to reset my password? Also, how to install Outlook?" - I can handle multiple questions at once!</p>
+                        </div>
+                    </div>
                 </footer>
             </div>
         </div>
