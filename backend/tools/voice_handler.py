@@ -1,4 +1,6 @@
-# HuggingFace TTS Voice Handler for IT Helpdesk Bot
+# DEPRECATED: HuggingFace TTS Voice Handler for IT Helpdesk Bot
+# This module is no longer used in the application but kept for reference
+# The AZOPENAI_EMBEDDING_API_KEY is now used for ChromaDB embeddings instead
 import requests
 import base64
 import io

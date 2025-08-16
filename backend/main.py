@@ -27,7 +27,6 @@ from .ticket_management import get_ticket_statistics
 # Import new enhanced features
 try:
     from .tools.faq_handler import get_knowledge_base
-    from .tools.voice_handler import generate_voice_response
     from .data.mock_data import get_all_knowledge_data
     ENHANCED_FEATURES_AVAILABLE = True
 except ImportError as e:
@@ -350,28 +349,11 @@ def chat(req: ChatRequest):
         # Get updated ticket statistics for frontend
         ticket_stats = get_ticket_statistics()
 
-        # Generate voice response if available and working
-        audio_response = None
-        if ENHANCED_FEATURES_AVAILABLE and final_response:
-            try:
-                # Generate voice for the final assistant response
-                audio_response = generate_voice_response(final_response)
-                if audio_response and audio_response.get("success"):
-                    print(
-                        f"✅ TTS generated successfully using {audio_response.get('model_used', 'unknown model')}")
-                else:
-                    print(
-                        f"⚠️ TTS generation failed: {audio_response.get('message', 'Unknown error') if audio_response else 'No response'}")
-            except Exception as e:
-                print(f"❌ TTS generation error: {e}")
-                audio_response = None
-
         return ChatResponse(
             reply=final_response,
             messages=history_for_client,
             tickets=[],  # Empty list for backward compatibility
-            stats=ticket_stats,
-            audio=audio_response
+            stats=ticket_stats
         )
 
     except Exception as e:
