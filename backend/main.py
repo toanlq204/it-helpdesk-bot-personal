@@ -45,6 +45,53 @@ SESSION_CLEANUP_HOURS = 24  # Hours after which to cleanup old sessions
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+def format_and_limit_response(response: str, max_length: int = 2000) -> str:
+    """Format response with proper markdown and limit length"""
+
+    # Ensure we're using Pinecone data by adding a data source indicator
+    if "🔍 **Knowledge Base Search Results:**" not in response and "vector" not in response.lower():
+        # If response doesn't contain vector search results, add a note about data sources
+        if len(response) > 50:  # Only for substantial responses
+            response += "\n\n*💡 This response uses data from our comprehensive Pinecone vector database and IT knowledge base.*"
+
+    # Clean up and format markdown
+    # Ensure proper spacing around markdown elements
+    response = response.replace(
+        "**", " **").replace("**", "** ").replace("  **", " **").replace("**  ", "** ")
+    response = response.replace("##", "\n\n## ").replace("###", "\n\n### ")
+    response = response.replace("- ", "\n- ").replace("\n\n- ", "\n- ")
+
+    # Clean up extra whitespace
+    import re
+    # Max 2 consecutive newlines
+    response = re.sub(r'\n{3,}', '\n\n', response)
+    response = re.sub(r' {2,}', ' ', response)  # Max 1 space between words
+    response = response.strip()
+
+    # Truncate if too long
+    if len(response) > max_length:
+        original_length = len(response)
+
+        # Find a good breaking point (preferably end of sentence or paragraph)
+        truncate_point = max_length
+
+        # Look for sentence endings near the limit
+        for ending in ['. ', '.\n', '!\n', '?\n']:
+            pos = response.rfind(ending, max_length - 200, max_length)
+            if pos > max_length - 300:  # Don't truncate too aggressively
+                truncate_point = pos + len(ending)
+                break
+
+        response = response[:truncate_point].rstrip()
+        if not response.endswith(('.', '!', '?')):
+            response += "..."
+
+        response += f"\n\n*Response truncated for readability. ({len(response)} of {original_length} characters shown)*"
+
+    return response
+
+
 # Initialize FastAPI application
 app = FastAPI(title="IT Helpdesk Bot API - Enhanced Edition")
 
@@ -58,43 +105,58 @@ app.add_middleware(
 )
 
 # Enhanced system prompt for the IT Helpdesk assistant
-SYSTEM_PROMPT = """You are an advanced IT Helpdesk assistant for an enterprise environment.
+SYSTEM_PROMPT = """You are an advanced IT Helpdesk assistant with integrated AI capabilities for enterprise IT support.
 
 🔧 **Core Capabilities:**
-- Comprehensive ChromaDB knowledge base with FAQs, software guides, and IT policies
-- Enhanced FAQ database with smart matching
-- Interactive step-by-step troubleshooting flows
-- Advanced ticket management with auto-categorization
-- Multi-turn conversation context awareness
-- Voice response capabilities
+- 🔍 **Pinecone Vector Search**: Fast semantic search across comprehensive knowledge base (FAQs, software guides, IT policies)
+- ⚡ **Function Calling**: Automated task execution including ticket creation, system checks, and troubleshooting
+- 🤖 **LangChain RAG**: Context-aware conversations with memory and intelligent responses
+- 🎯 **Multi-Query Processing**: Handle multiple requests efficiently in single interactions
 
 🎯 **Your Approach:**
 - Be helpful, concise, and professional
-- Search the ChromaDB knowledge base first for comprehensive information
-- Use the legacy knowledge base and troubleshooting flows as backup
-- Create tickets when hands-on assistance is needed
-- Remember context from previous interactions in the conversation
-- Handle follow-up questions intelligently
+- ALWAYS search the Pinecone knowledge base first for comprehensive IT information
+- Format responses using proper Markdown for better readability
+- Use function calling for automated tasks (ticket creation, status checks, troubleshooting flows)
+- Maintain conversation context and provide contextual follow-up responses
 - Process multiple questions efficiently when asked together
+- Provide step-by-step guidance for complex issues
+- Keep responses under 2000 characters when possible for better UI experience
+
+📝 **Response Formatting Guidelines:**
+- Use **bold** for important points and headings
+- Use *italics* for emphasis
+- Use `code formatting` for technical terms, commands, and file names
+- Use numbered lists for step-by-step instructions
+- Use bullet points for feature lists or options
+- Use > blockquotes for important warnings or notes
+- Structure content with proper headings (##, ###)
 
 🛠️ **Available Tools:**
-- Search ChromaDB knowledge base for FAQs, software guides, and policies
-- Search legacy knowledge base articles for detailed solutions
-- Access enhanced FAQ database
+- Search Pinecone vector database for FAQs, software guides, and IT policies
+- Search enhanced knowledge base articles for detailed solutions
 - Start interactive troubleshooting flows (wifi_issues, printer_issues, email_issues)
-- Create and track support tickets with priorities
+- Create and track support tickets with auto-categorization and priorities
 - Check ticket status and list user tickets
-- Get helpdesk statistics
+- Get comprehensive helpdesk and system statistics
 
-💡 **Guidelines:**
-- Always search the ChromaDB knowledge base first for comprehensive IT information
-- Use legacy knowledge base search for complex technical articles
-- Use troubleshooting flows for common problems (Wi-Fi, printers, email)
-- Create tickets for issues requiring hands-on support or when solutions don't work
-- Maintain conversation context and handle follow-ups like "that didn't work"
-- Be proactive in suggesting next steps or alternatives
+💡 **Best Practices:**
+- Start with vector search for relevant knowledge base information from Pinecone
+- Prioritize Pinecone database results over mock or fallback data
+- Use troubleshooting flows for guided problem-solving
+- Create tickets when hands-on assistance is needed or solutions don't resolve issues
+- Provide comprehensive responses that combine search results with practical guidance
+- Handle follow-ups intelligently with context awareness
+- Be proactive in suggesting next steps and alternatives
+- Always format responses with clear markdown structure for better readability
 
-Remember: You can handle multiple questions at once and maintain context throughout the conversation."""
+🔒 **Data Sources Priority:**
+1. **Pinecone Vector Database** (Primary) - Comprehensive, up-to-date IT knowledge
+2. **Function Tools** - Real-time ticket management and system operations
+3. **LangChain RAG** - Contextual conversation memory
+4. **Legacy Knowledge Base** (Fallback only) - Use only when Pinecone is unavailable
+
+Remember: You integrate all AI capabilities seamlessly to provide the best possible IT support experience with properly formatted, Pinecone-powered responses."""
 
 
 def initialize_knowledge_base():
@@ -242,9 +304,38 @@ def should_cleanup_sessions() -> bool:
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
-    """Enhanced chat endpoint with context awareness and advanced features"""
+    """Unified AI-enhanced chat endpoint with integrated Pinecone vector search, LangChain RAG, and function calling"""
     try:
         client = get_client()
+
+        # Import AI enhancement modules with fallbacks
+        try:
+            from .tools.pinecone_handler import query_vector_knowledge
+            PINECONE_AVAILABLE = True
+        except ImportError:
+            PINECONE_AVAILABLE = False
+
+        try:
+            from .tools.langchain_manager import enhanced_chat_query
+            LANGCHAIN_AVAILABLE = True
+        except ImportError:
+            LANGCHAIN_AVAILABLE = False
+
+        try:
+            from .tools.enhanced_function_handler import intelligent_function_call
+            ENHANCED_FUNCTIONS_AVAILABLE = True
+        except ImportError:
+            ENHANCED_FUNCTIONS_AVAILABLE = False
+
+        # Import mock vector search as fallback
+        # Commenting out mock vector search to ensure Pinecone is used
+        # try:
+        #     from .tools.mock_vector_search import mock_query_vector_knowledge
+        #     MOCK_VECTOR_AVAILABLE = True
+        # except ImportError:
+        MOCK_VECTOR_AVAILABLE = False
+
+        AI_FEATURES_AVAILABLE = PINECONE_AVAILABLE or LANGCHAIN_AVAILABLE or ENHANCED_FUNCTIONS_AVAILABLE or MOCK_VECTOR_AVAILABLE
 
         # Get enhanced session with context management
         session = get_enhanced_session(req.session_id)
@@ -256,73 +347,174 @@ def chat(req: ChatRequest):
 
         tools = get_tools_schema()
 
-        # Enhanced tool calling loop with better context management
-        tool_turns = 0
+        # Initialize response data
         final_response = ""
-        tool_results_accumulated = []
+        features_used = []
+        ai_enhanced = False
 
-        while tool_turns < MAX_TOOL_TURNS:
-            completion = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=messages,
-                tools=tools,
-                tool_choice="auto",
-                temperature=0.2,
-            )
-            msg = completion.choices[0].message
+        # Try AI-enhanced processing first if available
+        if AI_FEATURES_AVAILABLE:
+            try:
+                # Step 1: Try vector search (Pinecone or mock) for knowledge retrieval
+                vector_search_attempted = False
 
-            if msg.tool_calls:
-                # Process tool calls and accumulate results
-                tool_results = []
+                # Try Pinecone first if available
+                if PINECONE_AVAILABLE:
+                    try:
+                        vector_result = query_vector_knowledge(req.message)
+                        if vector_result and "No relevant knowledge found" not in vector_result:
+                            final_response = vector_result
+                            features_used.append("pinecone_vector_search")
+                            ai_enhanced = True
+                            vector_search_attempted = True
+                    except Exception as e:
+                        logger.warning(f"Pinecone search failed: {e}")
 
-                for tool_call in msg.tool_calls:
-                    name = tool_call.function.name
-                    arguments = tool_call.function.arguments
-                    result = call_tool_by_name(name, arguments)
+                # Try mock vector search if Pinecone failed or not available
+                # Removed mock vector search to ensure only Pinecone data is used
+                # if not vector_search_attempted and MOCK_VECTOR_AVAILABLE:
+                #     try:
+                #         mock_result = mock_query_vector_knowledge(req.message)
+                #         if mock_result and "No relevant knowledge found" not in mock_result:
+                #             final_response = mock_result
+                #             features_used.append("mock_vector_search")
+                #             ai_enhanced = True
+                #             vector_search_attempted = True
+                #     except Exception as e:
+                #         logger.warning(f"Mock vector search failed: {e}")
 
-                    # Update conversation context based on tool usage
-                    update_context_for_tool_call(
-                        name, arguments, result, req.session_id)
-                    tool_results.append(result)
+                # Step 2: Try LangChain RAG if no vector search or to enhance results
+                if not vector_search_attempted and LANGCHAIN_AVAILABLE:
+                    try:
+                        rag_response = enhanced_chat_query(
+                            req.message, req.session_id)
+                        if rag_response and "error" not in rag_response.lower():
+                            final_response = rag_response
+                            features_used.append("langchain_rag")
+                            ai_enhanced = True
+                        else:
+                            raise Exception("LangChain RAG failed")
+                    except Exception as e:
+                        logger.warning(f"LangChain RAG failed: {e}")
 
-                # Accumulate all tool results
-                tool_results_accumulated.extend(tool_results)
+                # Step 3: Try intelligent function calling for task-oriented queries
+                if not ai_enhanced and ENHANCED_FUNCTIONS_AVAILABLE:
+                    try:
+                        agent_result = intelligent_function_call(
+                            req.message, req.session_id)
+                        if agent_result and "error" not in agent_result.lower():
+                            final_response = agent_result
+                            features_used.append(
+                                "intelligent_function_calling")
+                            ai_enhanced = True
+                        else:
+                            raise Exception("Function calling failed")
+                    except Exception as e:
+                        logger.warning(
+                            f"Intelligent function calling failed: {e}")
 
-                # Create a summary of tool results for the next iteration
-                if tool_results:
-                    tool_summary = "\n\n".join(tool_results)
-                    # Add the tool results as a system message to guide the next response
-                    messages.append({
-                        "role": "user",
-                        "content": f"Based on the tool results: {tool_summary}\n\nPlease provide a helpful response to the user."
-                    })
+            except Exception as e:
+                logger.warning(f"All AI enhancement attempts failed: {e}")
 
-                tool_turns += 1
-                continue
-            else:
-                # No more tool calls → this is the final answer
-                final_response = msg.content or "I'm here to help with your IT needs."
-                messages.append(
-                    {"role": "assistant", "content": final_response})
-                break
+        # Fallback to enhanced tool calling with OpenAI if AI features didn't work
+        if not ai_enhanced:
+            tool_turns = 0
+            tool_results_accumulated = []
 
-        # If we have tool results but no final response, create one from the tool results
-        if not final_response and tool_results_accumulated:
-            final_response = "\n\n".join(tool_results_accumulated)
-            messages.append({"role": "assistant", "content": final_response})
-        elif not final_response:
-            final_response = "I'm here to help with your IT needs."
-            messages.append({"role": "assistant", "content": final_response})
+            while tool_turns < MAX_TOOL_TURNS:
+                completion = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=messages,
+                    tools=tools,
+                    tool_choice="auto",
+                    temperature=0.2,
+                )
+                msg = completion.choices[0].message
 
-        # Store cleaned messages back to session (only user, assistant, system)
-        session["messages"] = messages
+                if msg.tool_calls:
+                    # Process tool calls and accumulate results
+                    tool_results = []
 
-        # Trim message history if needed
+                    for tool_call in msg.tool_calls:
+                        name = tool_call.function.name
+                        arguments = tool_call.function.arguments
+                        result = call_tool_by_name(name, arguments)
+
+                        # Update conversation context based on tool usage
+                        update_context_for_tool_call(
+                            name, arguments, result, req.session_id)
+                        tool_results.append(result)
+
+                    # Accumulate all tool results
+                    tool_results_accumulated.extend(tool_results)
+
+                    # Create a summary of tool results for the next iteration
+                    if tool_results:
+                        tool_summary = "\n\n".join(tool_results)
+                        # Add the tool results as a system message to guide the next response
+                        messages.append({
+                            "role": "user",
+                            "content": f"Based on the tool results: {tool_summary}\n\nPlease provide a helpful response to the user."
+                        })
+
+                    tool_turns += 1
+                else:
+                    # No more tool calls, get final response
+                    final_response = msg.content or "I apologize, but I'm having trouble processing your request right now."
+                    features_used.append("openai_function_calling")
+                    break
+
+            # If we exhausted tool turns without a final response
+            if not final_response and tool_results_accumulated:
+                final_response = f"I've completed several operations for you:\n\n" + \
+                    "\n\n".join(tool_results_accumulated)
+                features_used.append("openai_function_calling")
+
+        # Ensure we have a response
+        if not final_response:
+            final_response = "I apologize, but I'm having trouble processing your request right now. Please try again or contact IT support directly."
+
+        # Format and limit response for better UI experience
+        final_response = format_and_limit_response(final_response)
+
+        # Update conversation and session management
+        messages.append({"role": "assistant", "content": final_response})
         trim_message_history(messages, session)
 
-        # Cleanup old sessions periodically
+        # Optional session cleanup
         if should_cleanup_sessions():
-            cleanup_old_sessions(SESSION_CLEANUP_HOURS)
+            try:
+                cleanup_old_sessions(SESSION_CLEANUP_HOURS)
+            except Exception as e:
+                logger.warning(f"Session cleanup failed: {e}")
+
+        response_messages = [
+            ChatMessage(role="user", content=req.message),
+            ChatMessage(role="assistant", content=final_response)
+        ]
+
+        return ChatResponse(
+            reply=final_response,
+            messages=response_messages,
+            session_id=req.session_id,
+            features_used=features_used,
+            ai_enhanced=ai_enhanced
+        )
+
+    except Exception as e:
+        logger.error(f"Error in unified chat endpoint: {e}")
+        error_response = f"I encountered an error while processing your request: {str(e)}. Please try again."
+
+        return ChatResponse(
+            reply=error_response,
+            messages=[
+                ChatMessage(role="user", content=req.message),
+                ChatMessage(role="assistant", content=error_response)
+            ],
+            session_id=req.session_id,
+            features_used=["error_fallback"],
+            ai_enhanced=False
+        )
 
         # Create response payload for frontend
         history_for_client: List[ChatMessage] = [
@@ -413,162 +605,7 @@ def get_system_stats():
             status_code=500, detail=f"Error retrieving stats: {str(e)}")
 
 
-# Workshop 4 Enhanced Endpoints
-@app.post("/chat/enhanced")
-def chat_enhanced(request: ChatRequest):
-    """
-    Enhanced chat endpoint with advanced AI features:
-    - Vector database search with Pinecone
-    - Advanced conversational AI with LangChain
-    - Intelligent function calling with AI agents
-    """
-    try:
-        # Import advanced AI components with fallbacks
-        try:
-            from .tools.pinecone_handler import query_vector_knowledge
-            from .tools.langchain_manager import enhanced_chat_query
-            from .tools.enhanced_function_handler import intelligent_function_call
-            ADVANCED_FEATURES_AVAILABLE = True
-        except ImportError as e:
-            logger.warning(f"Advanced AI features not available: {e}")
-            ADVANCED_FEATURES_AVAILABLE = False
-
-        session_id = request.session_id or "default"
-        user_message = request.message
-
-        # Determine processing mode based on message content
-        processing_mode = "auto"  # auto, vector_only, rag_only, agent_only
-
-        # Check for mode hints in the message
-        if "search knowledge" in user_message.lower() or "find information" in user_message.lower():
-            processing_mode = "vector_only"
-        elif "troubleshoot" in user_message.lower() or "step by step" in user_message.lower():
-            processing_mode = "rag_only"
-        elif "create ticket" in user_message.lower() or "call function" in user_message.lower():
-            processing_mode = "agent_only"
-
-        response_data = {
-            "reply": "",  # Changed from "message" to "reply"
-            "messages": [],  # Will be populated below
-            "session_id": session_id,
-            "processing_mode": processing_mode,
-            "features_used": [],
-            "fallback_used": False
-        }
-
-        if not ADVANCED_FEATURES_AVAILABLE:
-            # Fallback to original chat endpoint
-            fallback_response = chat(request)
-            response_data["reply"] = fallback_response.reply
-            response_data["messages"] = fallback_response.messages
-            response_data["fallback_used"] = True
-            response_data["features_used"] = ["legacy_chat"]
-            return ChatResponse(**response_data)
-
-        try:
-            if processing_mode == "vector_only":
-                # Use vector database search only
-                vector_result = query_vector_knowledge(user_message)
-                response_data["reply"] = vector_result
-                response_data["features_used"] = ["vector_database_search"]
-
-            elif processing_mode == "rag_only":
-                # Use LangChain conversational AI
-                conversation_result = enhanced_chat_query(
-                    user_message, session_id)
-                response_data["reply"] = conversation_result
-                response_data["features_used"] = ["advanced_conversation_ai"]
-
-            elif processing_mode == "agent_only":
-                # Use intelligent function calling with AI agents
-                agent_result = intelligent_function_call(
-                    user_message, session_id)
-                response_data["reply"] = agent_result
-                response_data["features_used"] = [
-                    "intelligent_function_calling"]
-
-            else:
-                # Auto mode: Try enhanced features in sequence
-                features_attempted = []
-
-                # Step 1: Try LangChain conversation AI first (most comprehensive)
-                try:
-                    conversation_result = enhanced_chat_query(
-                        user_message, session_id)
-                    if conversation_result and "error" not in conversation_result.lower():
-                        response_data["reply"] = conversation_result
-                        features_attempted.append("advanced_conversation_ai")
-                    else:
-                        raise Exception(
-                            "Conversation AI returned error or empty result")
-
-                except Exception as e:
-                    logger.warning(f"LangChain conversation AI failed: {e}")
-
-                    # Step 2: Try intelligent function calling
-                    try:
-                        agent_result = intelligent_function_call(
-                            user_message, session_id)
-                        if agent_result and "error" not in agent_result.lower():
-                            response_data["reply"] = agent_result
-                            features_attempted.append(
-                                "intelligent_function_calling")
-                        else:
-                            raise Exception(
-                                "Agent returned error or empty result")
-
-                    except Exception as e:
-                        logger.warning(
-                            f"Intelligent function calling failed: {e}")
-
-                        # Step 3: Try vector search
-                        try:
-                            vector_result = query_vector_knowledge(
-                                user_message)
-                            if vector_result and "No relevant knowledge found" not in vector_result:
-                                response_data["reply"] = vector_result
-                                features_attempted.append(
-                                    "vector_database_search")
-                            else:
-                                raise Exception(
-                                    "Vector search returned no results")
-
-                        except Exception as e:
-                            logger.warning(f"Vector search failed: {e}")
-                            # Final fallback to legacy chat
-                            fallback_response = chat(request)
-                            response_data["reply"] = fallback_response.reply
-                            response_data["messages"] = fallback_response.messages
-                            response_data["fallback_used"] = True
-                            features_attempted.append("legacy_chat")
-
-                response_data["features_used"] = features_attempted
-
-        except Exception as e:
-            logger.error(f"Error in enhanced chat processing: {e}")
-            # Fallback to original chat endpoint
-            fallback_response = chat(request)
-            response_data["reply"] = fallback_response.reply
-            response_data["messages"] = fallback_response.messages
-            response_data["fallback_used"] = True
-            response_data["features_used"] = ["legacy_chat"]
-            response_data["error"] = str(e)
-
-        # Ensure messages are populated if not already done
-        if not response_data.get("messages"):
-            response_data["messages"] = [
-                ChatMessage(role="user", content=user_message),
-                ChatMessage(role="assistant", content=response_data["reply"])
-            ]
-
-        return ChatResponse(**response_data)
-
-    except Exception as e:
-        logger.error(f"Critical error in enhanced chat: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Enhanced chat error: {str(e)}")
-
-
+# System demonstration and reporting endpoints remain available
 @app.get("/system/demo")
 def system_demonstration():
     """

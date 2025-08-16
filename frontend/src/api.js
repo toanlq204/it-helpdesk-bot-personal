@@ -1,7 +1,7 @@
 // API configuration and functions for communicating with backend
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
-// Send a chat message to the backend
+// Send a chat message to the unified AI-enhanced backend
 export async function sendMessage(sessionId, message) {
   const res = await fetch(`${API_BASE}/chat`, {
     method: "POST",
@@ -17,23 +17,5 @@ export async function sendMessage(sessionId, message) {
 // Check server health status
 export async function health() {
   const res = await fetch(`${API_BASE}/health`);
-  return res.json();
-}
-
-// Send enhanced chat message with processing options
-export async function sendEnhancedMessage(sessionId, message, options = {}) {
-  const res = await fetch(`${API_BASE}/chat/enhanced`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ 
-      session_id: sessionId, 
-      message,
-      processing_mode: options.mode || 'auto',
-      include_voice: options.voice || false
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`Server error: ${res.status}`);
-  }
   return res.json();
 }

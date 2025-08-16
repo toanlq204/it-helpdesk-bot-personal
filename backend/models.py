@@ -19,9 +19,13 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    """Enhanced response model for chat endpoint"""
+    """Enhanced response model for unified chat endpoint"""
     reply: str
     messages: List[ChatMessage]
+    session_id: str
+    # Track which AI features were used
+    features_used: Optional[List[str]] = []
+    ai_enhanced: Optional[bool] = False  # Whether AI enhancements were applied
     tickets: Optional[List[Dict[str, Any]]] = None
     stats: Optional[Dict[str, Any]] = None  # Enhanced ticket statistics
     context: Optional[Dict[str, Any]] = None  # Conversation context info

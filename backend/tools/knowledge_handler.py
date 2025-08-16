@@ -213,29 +213,57 @@ def query_it_knowledge(query: str, collection: str = None) -> str:
 
 
 def initialize_knowledge_base_with_data():
-    """Initialize the knowledge base with mock data"""
+    """Initialize the knowledge base with comprehensive IT test data"""
     try:
+        # Import test data preparation
+        from ..data.test_data_preparation import prepare_pinecone_test_data
         from ..data.mock_data import get_all_knowledge_data
 
-        kb = get_knowledge_base()
-        if not kb.vector_store_manager:
+        # Get enhanced test data
+        test_data, test_scenarios = prepare_pinecone_test_data()
+        if not test_data:
+            logger.warning(
+                "Enhanced test data not available, using basic data")
+            test_data = get_all_knowledge_data()
+
+        # If vector store is available, populate it
+        if VECTOR_STORE_AVAILABLE:
+            try:
+                vector_manager = VectorStoreManager()
+
+                # Add data to different namespaces
+                for category, documents in test_data.items():
+                    namespace_mapping = {
+                        "faqs": "faqs",
+                        "software": "kb_articles",
+                        "policies": "policies",
+                        "troubleshooting": "troubleshooting"
+                    }
+
+                    namespace = namespace_mapping.get(category, "faqs")
+                    success = vector_manager.add_documents(
+                        documents, namespace)
+
+                    if success:
+                        logger.info(
+                            f"✅ Added {len(documents)} documents to {namespace} namespace")
+                    else:
+                        logger.warning(
+                            f"⚠️ Failed to add documents to {namespace} namespace")
+
+                logger.info(
+                    "🚀 Knowledge base initialization completed with enhanced test data")
+                return True
+
+            except Exception as e:
+                logger.error(f"Error initializing vector store: {e}")
+                logger.info("Falling back to basic knowledge base")
+                return False
+        else:
             logger.info(
-                "Vector store not available, skipping data initialization")
-            return
-
-        all_data = get_all_knowledge_data()
-
-        for collection_name, documents in all_data.items():
-            if documents:
-                success = kb.add_knowledge(collection_name, documents)
-                if success:
-                    logger.info(
-                        f"Added {len(documents)} documents to {collection_name}")
-                else:
-                    logger.warning(
-                        f"Failed to add documents to {collection_name}")
-
-        logger.info("Knowledge base initialization completed")
+                "Vector store not available, using fallback knowledge base")
+            return True
 
     except Exception as e:
-        logger.error(f"Error initializing knowledge base: {e}")
+        logger.error(f"Error in knowledge base initialization: {e}")
+        return False

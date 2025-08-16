@@ -2,12 +2,12 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import ChatWindow from "./components/ChatWindow.jsx";
 import SmartQuickActions from "./components/SmartQuickActions.jsx";
-import { sendMessage, sendEnhancedMessage, health } from "./api.js";
+import { sendMessage, health } from "./api.js";
 
 export default function App() {
     // State for managing chat messages
     const [messages, setMessages] = useState([
-        { role: "assistant", content: "Hello! 👋 Welcome to your **AI-Powered IT Helpdesk Assistant**! \n\n🚀 **What I can help you with:**\n\n🔍 **Smart Search** - Find solutions instantly from our knowledge base\n⚡ **Automated Actions** - I can execute tasks and create tickets for you\n🤖 **Intelligent Conversations** - I remember our chat and provide contextual help\n🎯 **Multi-Request Handling** - Ask me multiple questions at once\n\n💡 **Try asking me:**\n- \"I can't connect to the office Wi-Fi, help me troubleshoot\"\n- \"Search for VPN setup guides and create a support ticket\"\n- \"Reset my password and show me printer installation steps\"\n- \"What's the status of my recent tickets?\"\n\nHow can I assist you today? 🚀" }
+        { role: "assistant", content: "# Welcome to your AI IT Helpdesk Assistant! 👋\n\n## 🚀 **Advanced AI Capabilities**\n\n- **🔍 Pinecone Vector Search** - Lightning-fast semantic search across our comprehensive knowledge base\n- **⚡ Function Calling** - Automated task execution and intelligent ticket management\n- **🤖 LangChain RAG** - Context-aware conversations with advanced memory\n- **🎯 Multi-Query Processing** - Handle multiple requests efficiently in one go\n\n## 💡 **Try asking me:**\n\n- *\"I can't connect to the office Wi-Fi, help me troubleshoot\"*\n- *\"Search for VPN setup guides and create a support ticket\"*\n- *\"Reset my password and show me printer installation steps\"*\n- *\"What's the status of my recent tickets?\"*\n\n**How can I assist you today?** 🚀" }
     ]);
     const [input, setInput] = useState("");
     const [serverHealth, setServerHealth] = useState(null);
@@ -16,7 +16,7 @@ export default function App() {
     const [audioData, setAudioData] = useState(null);
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const [currentView, setCurrentView] = useState('chat'); // 'chat', 'actions'
-    const [useEnhancedMode, setUseEnhancedMode] = useState(true);
+    const [featuresUsed, setFeaturesUsed] = useState([]);
 
     // Audio refs for voice playback
     const audioRef = useRef(null);
@@ -80,12 +80,16 @@ export default function App() {
         setAudioData(null); // Clear previous audio data
 
         try {
-            const res = useEnhancedMode
-                ? await sendEnhancedMessage(sessionId, text, { voice: true })
-                : await sendMessage(sessionId, text);
+            // Send message to unified AI-enhanced endpoint
+            const res = await sendMessage(sessionId, text);
 
             // Server returns full history (user + assistant). We only add the new assistant message:
             setMessages((prev) => [...prev, { role: "assistant", content: res.reply }]);
+
+            // Update features used for display
+            if (res.features_used) {
+                setFeaturesUsed(res.features_used);
+            }
 
             // Update ticket stats if provided in response
             if (res.stats) {
@@ -99,7 +103,7 @@ export default function App() {
         } catch (e) {
             setMessages((prev) => [
                 ...prev,
-                { role: "assistant", content: `Sorry, I encountered an error: ${e.message}. Please try again or switch to basic mode. 😔` }
+                { role: "assistant", content: `Sorry, I encountered an error: ${e.message}. Please try again. 😔` }
             ]);
         } finally {
             setLoading(false);
@@ -155,18 +159,13 @@ export default function App() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            {/* Mode Toggle */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-blue-200 text-sm">Enhanced Mode</span>
-                                <button
-                                    onClick={() => setUseEnhancedMode(!useEnhancedMode)}
-                                    className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${useEnhancedMode ? 'bg-blue-500' : 'bg-gray-600'
-                                        }`}
-                                >
-                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 ${useEnhancedMode ? 'translate-x-7' : 'translate-x-1'
-                                        }`}></div>
-                                </button>
-                            </div>
+                            {/* AI Features Display */}
+                            {featuresUsed.length > 0 && (
+                                <div className="bg-green-500/20 text-green-300 border border-green-500/30 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+                                    <span>🤖</span>
+                                    <span>{featuresUsed.length > 1 ? `${featuresUsed.length} AI features` : featuresUsed[0]}</span>
+                                </div>
+                            )}
 
                             {/* Ticket Stats Display */}
                             {ticketStats !== null && (

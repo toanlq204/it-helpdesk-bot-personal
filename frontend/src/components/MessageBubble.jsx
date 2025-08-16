@@ -1,6 +1,17 @@
 // Component for rendering individual chat message bubbles
+import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+
 export default function MessageBubble({ role, content, isPlaying, audioError }) {
     const isUser = role === "user";
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Character limit for responses
+    const CHARACTER_LIMIT = 800;
+    const shouldTruncate = !isUser && content.length > CHARACTER_LIMIT;
+    const displayContent = shouldTruncate && !isExpanded
+        ? content.substring(0, CHARACTER_LIMIT) + "..."
+        : content;
 
     return (
         <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
@@ -31,8 +42,61 @@ export default function MessageBubble({ role, content, isPlaying, audioError }) 
                     >
                         {/* Message content */}
                         <div className="whitespace-pre-wrap break-words">
-                            {content}
+                            {isUser ? (
+                                // For user messages, display as plain text
+                                displayContent
+                            ) : (
+                                // For assistant messages, render as markdown
+                                <div className="prose-chat">
+                                    <ReactMarkdown
+                                        components={{
+                                            // Custom styling for markdown elements
+                                            h1: ({ children }) => <h1 className="text-lg font-bold text-white mb-2">{children}</h1>,
+                                            h2: ({ children }) => <h2 className="text-base font-semibold text-white mb-2">{children}</h2>,
+                                            h3: ({ children }) => <h3 className="text-sm font-medium text-white mb-1">{children}</h3>,
+                                            p: ({ children }) => <p className="text-white mb-2 last:mb-0">{children}</p>,
+                                            ul: ({ children }) => <ul className="list-disc list-inside text-white mb-2 space-y-1">{children}</ul>,
+                                            ol: ({ children }) => <ol className="list-decimal list-inside text-white mb-2 space-y-1">{children}</ol>,
+                                            li: ({ children }) => <li className="text-white">{children}</li>,
+                                            strong: ({ children }) => <strong className="font-semibold text-blue-200">{children}</strong>,
+                                            em: ({ children }) => <em className="italic text-blue-100">{children}</em>,
+                                            code: ({ children }) => <code className="bg-black/30 text-green-300 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                                            pre: ({ children }) => <pre className="bg-black/50 text-green-300 p-3 rounded-lg text-sm font-mono overflow-x-auto mb-2">{children}</pre>,
+                                            blockquote: ({ children }) => <blockquote className="border-l-4 border-blue-400 pl-4 italic text-blue-100 mb-2">{children}</blockquote>,
+                                            a: ({ href, children }) => <a href={href} className="text-blue-300 hover:text-blue-200 underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                                        }}
+                                    >
+                                        {displayContent}
+                                    </ReactMarkdown>
+                                </div>
+                            )}
                         </div>
+
+                        {/* Show more/less button for long responses */}
+                        {shouldTruncate && (
+                            <div className="mt-2 pt-2 border-t border-white/10">
+                                <button
+                                    onClick={() => setIsExpanded(!isExpanded)}
+                                    className="text-xs text-blue-300 hover:text-blue-200 transition-colors duration-200 flex items-center gap-1"
+                                >
+                                    {isExpanded ? (
+                                        <>
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                            </svg>
+                                            Show less
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                            Show more ({content.length - CHARACTER_LIMIT} more characters)
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
 
                         {/* Audio status indicators for assistant messages */}
                         {!isUser && (isPlaying || audioError) && (

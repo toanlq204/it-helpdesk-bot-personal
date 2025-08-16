@@ -181,3 +181,91 @@ body {
 .quick-action-btn:active:not(:disabled) {
     transform: translateY(0);
 }
+
+/* Enhanced Markdown Styling for Chat Messages */
+.prose-chat {
+    color: inherit;
+    max-width: none;
+}
+
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3 {
+    color: inherit;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose-chat p {
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose-chat ul,
+.prose-chat ol {
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+    padding-left: 1rem;
+}
+
+.prose-chat li {
+    margin-top: 0.125rem;
+    margin-bottom: 0.125rem;
+}
+
+.prose-chat strong {
+    font-weight: 600;
+    color: rgb(219 234 254);
+    /* blue-100 */
+}
+
+.prose-chat em {
+    font-style: italic;
+    color: rgb(191 219 254);
+    /* blue-200 */
+}
+
+.prose-chat code {
+    background-color: rgba(0, 0, 0, 0.3);
+    color: rgb(134 239 172);
+    /* green-300 */
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+.prose-chat pre {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: rgb(134 239 172);
+    /* green-300 */
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+}
+
+.prose-chat blockquote {
+    border-left: 4px solid rgb(96 165 250);
+    /* blue-400 */
+    padding-left: 1rem;
+    font-style: italic;
+    color: rgb(191 219 254);
+    /* blue-200 */
+    margin: 0.5rem 0;
+}
+
+.prose-chat a {
+    color: rgb(147 197 253);
+    /* blue-300 */
+    text-decoration: underline;
+}
+
+.prose-chat a:hover {
+    color: rgb(191 219 254);
+    /* blue-200 */
+}
+
+/* Quick Action Buttons */

@@ -5,7 +5,14 @@ import os
 import time
 import logging
 from typing import List, Dict, Any, Optional
-from pinecone import Pinecone, ServerlessSpec
+try:
+    from pinecone import Pinecone, ServerlessSpec
+except ImportError:
+    # Fallback for older pinecone versions
+    import pinecone
+    Pinecone = pinecone.Pinecone if hasattr(pinecone, 'Pinecone') else pinecone
+    ServerlessSpec = pinecone.ServerlessSpec if hasattr(
+        pinecone, 'ServerlessSpec') else None
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain.schema import Document
@@ -46,16 +53,66 @@ class VectorStoreManager:
         # Initialize Pinecone
         self.pc = Pinecone(api_key=self.api_key)
 
-        # Initialize Azure OpenAI embeddings
-        self.embeddings = AzureOpenAIEmbeddings(
-            model=os.getenv("AZOPENAI_EMBEDDING_MODEL",
-                            "text-embedding-3-small"),
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            api_version=os.getenv(
-                "AZURE_OPENAI_API_VERSION", "2024-07-01-preview"),
-            chunk_size=1000
-        )
+        # Initialize embeddings - try multiple approaches
+        self.embeddings = None
+        embedding_error = None
+
+        # Try Azure OpenAI with dedicated embedding key first
+        try:
+            from langchain_openai import AzureOpenAIEmbeddings
+
+            # Use the dedicated embedding API key
+            embedding_key = os.getenv("AZOPENAI_EMBEDDING_API_KEY")
+            if not embedding_key:
+                embedding_key = os.getenv("AZURE_OPENAI_API_KEY")
+
+            self.embeddings = AzureOpenAIEmbeddings(
+                model=os.getenv("AZOPENAI_EMBEDDING_MODEL",
+                                "text-embedding-3-small"),
+                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                api_key=embedding_key,
+                api_version=os.getenv(
+                    "AZURE_OPENAI_API_VERSION", "2024-07-01-preview"),
+                chunk_size=1000
+            )
+            logger.info("Using Azure OpenAI embeddings with dedicated key")
+        except Exception as e:
+            embedding_error = str(e)
+            logger.warning(f"Azure OpenAI embeddings failed: {e}")
+
+            # Try OpenAI directly as fallback
+            try:
+                from langchain_openai import OpenAIEmbeddings
+                openai_key = os.getenv("OPENAI_API_KEY")
+                if openai_key:
+                    self.embeddings = OpenAIEmbeddings(
+                        model="text-embedding-3-small",
+                        openai_api_key=openai_key,
+                        chunk_size=1000
+                    )
+                    logger.info("Using OpenAI embeddings")
+                else:
+                    raise ValueError("No OpenAI API key available")
+            except Exception as e2:
+                embedding_error = f"Azure: {e}, OpenAI: {e2}"
+                logger.error(
+                    f"Both embedding services failed: {embedding_error}")
+
+                # Try using Sentence Transformers embeddings as final fallback
+                try:
+                    from langchain_community.embeddings import HuggingFaceEmbeddings
+                    self.embeddings = HuggingFaceEmbeddings(
+                        model_name="sentence-transformers/all-MiniLM-L6-v2"
+                    )
+                    logger.info(
+                        "Using Sentence Transformers embeddings as fallback")
+                    self.dimension = 384  # all-MiniLM-L6-v2 dimension
+                except Exception as e3:
+                    final_error = f"Azure: {e}, OpenAI: {e2}, HuggingFace: {e3}"
+                    logger.error(
+                        f"All embedding services failed: {final_error}")
+                    raise ValueError(
+                        f"Could not initialize any embedding service: {final_error}")
 
         # Initialize vector stores for different namespaces
         self.vector_stores = {}
@@ -154,32 +211,33 @@ class VectorStoreManager:
             return False
 
     def search(self, query: str, namespace: str = "faqs", k: int = 5,
-               score_threshold: float = 0.7) -> List[Dict[str, Any]]:
-        """Search for relevant documents in specified namespace"""
+               score_threshold: float = 0.2) -> List[Dict[str, Any]]:
+        """Search for relevant documents in specified namespace using raw Pinecone"""
         try:
-            if namespace not in self.vector_stores:
-                logger.error(f"Unknown namespace: {namespace}")
-                return []
+            # Use raw Pinecone search for better control
+            query_embedding = self.embeddings.embed_query(query)
 
-            vector_store = self.vector_stores[namespace]
-
-            # Perform similarity search with scores
-            docs_with_scores = vector_store.similarity_search_with_score(
-                query, k=k
+            search_result = self.index.query(
+                vector=query_embedding,
+                top_k=k,
+                include_metadata=True,
+                namespace=namespace
             )
 
-            # Filter by score threshold and format results
+            # Format results
             results = []
-            for doc, score in docs_with_scores:
-                # Convert similarity score to relevance score (higher is better)
-                relevance_score = 1 - score
+            for match in search_result.matches:
+                if match.score >= score_threshold:
+                    # Extract content from metadata
+                    content = match.metadata.get(
+                        'text', 'No content available')
 
-                if relevance_score >= score_threshold:
                     result = {
-                        "content": doc.page_content,
-                        "metadata": doc.metadata,
-                        "relevance_score": relevance_score,
-                        "namespace": namespace
+                        "content": content,
+                        "metadata": match.metadata,
+                        "relevance_score": match.score,
+                        "namespace": namespace,
+                        "id": match.id
                     }
                     results.append(result)
 
@@ -192,7 +250,7 @@ class VectorStoreManager:
             return []
 
     def search_all_namespaces(self, query: str, k: int = 3,
-                              score_threshold: float = 0.7) -> Dict[str, List[Dict[str, Any]]]:
+                              score_threshold: float = 0.2) -> Dict[str, List[Dict[str, Any]]]:
         """Search across all namespaces and return organized results"""
         all_results = {}
 
