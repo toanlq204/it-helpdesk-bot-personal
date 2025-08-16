@@ -30,14 +30,16 @@ A full-stack AI-powered IT helpdesk chatbot with advanced features including Chr
 - **Azure OpenAI**: GPT-4o-mini for intelligent responses
 - **ChromaDB**: Vector database for semantic search
 - **Sentence Transformers**: Text embeddings for knowledge retrieval
-- **HuggingFace TTS**: Text-to-speech capabilities
+- **Uvicorn**: ASGI server for FastAPI applications
 - **Pydantic**: Data validation and serialization
+- **Python-dotenv**: Environment variable management
 
 ### Frontend
 - **React 18**: Modern React with hooks
-- **Vite**: Fast development build tool
+- **Vite**: Fast development build tool  
 - **Tailwind CSS**: Utility-first CSS framework
 - **Audio API**: Browser audio playback for voice responses
+- **@vitejs/plugin-react**: Official React plugin for Vite
 
 ## 🚀 Quick Start
 
@@ -45,12 +47,13 @@ A full-stack AI-powered IT helpdesk chatbot with advanced features including Chr
 - Python 3.8+
 - Node.js 16+
 - Azure OpenAI API access
-- HuggingFace API token (optional, for TTS)
+- VS Code (recommended for development)
 
 ### Easy Setup Script
 ```bash
 git clone https://github.com/toanlq204/it-helpdesk-bot-personal.git
 cd it-helpdesk-bot-personal
+git checkout feature/updateitbot_workshop3  # Switch to the enhanced features branch
 ./setup_enhanced.sh
 ```
 
@@ -76,10 +79,18 @@ cp env.template .env
 
 Edit `.env` file with your Azure OpenAI credentials:
 ```env
+# Azure OpenAI Configuration
 AZURE_OPENAI_API_KEY=your-azure-openai-api-key
 AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
 AZURE_OPENAI_API_VERSION=2024-07-01-preview
 MODEL_NAME=gpt-4o-mini
+
+# Azure OpenAI Embedding Configuration
+AZOPENAI_EMBEDDING_API_KEY=your-azure-openai-api-key
+AZOPENAI_EMBEDDING_MODEL=text-embedding-3-small
+
+# ChromaDB Configuration (Optional)
+CHROMADB_PERSIST_DIR=./chromadb_data
 ```
 
 ### 3. Frontend Setup
@@ -90,11 +101,24 @@ npm install
 
 ### 4. Run the Application
 
+#### Option 1: Using VS Code Tasks (Recommended)
+This project includes VS Code tasks for easy development. In VS Code:
+1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+2. Type "Tasks: Run Task"
+3. Select "Run Backend (FastAPI)" and "Run Frontend (React/Vite)"
+
+Or use the terminal commands below:
+
+#### Option 2: Manual Terminal Commands
+
 #### Start Backend (Terminal 1)
 ```bash
 # From project root
+source .venv/bin/activate  # Activate virtual environment
 uvicorn backend.main:app --reload --port 8000
 ```
+
+**Note**: The VS Code task uses the full path to the virtual environment Python interpreter, so it doesn't require manual activation.
 
 #### Start Frontend (Terminal 2)
 ```bash
@@ -108,39 +132,79 @@ The application will be available at:
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
 
+## � Development
+
+### Current Branch
+This project is currently on the `feature/updateitbot_workshop3` branch, which includes enhanced features and improvements.
+
+### Quick Development Setup
+1. Clone the repository
+2. Run the setup script: `./setup_enhanced.sh`
+3. Configure your `.env` file
+4. Use VS Code tasks to start both services
+
+### VS Code Integration
+
+This project includes VS Code configuration for seamless development:
+
+### Predefined Tasks
+- **Run Backend (FastAPI)**: Starts the FastAPI server with hot reload
+- **Run Frontend (React/Vite)**: Starts the Vite development server
+
+### Using VS Code Tasks
+1. Open Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`)
+2. Type "Tasks: Run Task"
+3. Select the desired task:
+   - "Run Backend (FastAPI)"
+   - "Run Frontend (React/Vite)"
+
+Both tasks run in the background, allowing you to start both services easily.
+
 ## 📁 Project Structure
 
 ```
+```
 it-helpdesk-bot-personal/
-├── backend/                    # FastAPI backend
-│   ├── main.py                # Main application and chat endpoint
-│   ├── models.py              # Pydantic data models
-│   ├── openai_client.py       # Azure OpenAI client configuration
-│   ├── functions.py           # Tool functions and ChromaDB integration
-│   ├── context_manager.py     # Session and context management
-│   ├── ticket_management.py   # Enhanced ticket system
-│   ├── knowledge_base.py      # Legacy knowledge base
-│   ├── tools/                 # Enhanced feature modules
-│   │   ├── faq_handler.py     # ChromaDB knowledge base handler
-│   │   └── voice_handler.py   # HuggingFace TTS integration
-│   └── data/                  # Knowledge base data
-│       └── mock_data.py       # IT knowledge database
-├── frontend/                   # React frontend
+├── .vscode/                   # VS Code configuration
+│   └── tasks.json            # Predefined tasks for running backend/frontend
+├── backend/                   # FastAPI backend
+│   ├── main.py               # Main application and chat endpoint
+│   ├── models.py             # Pydantic data models
+│   ├── openai_client.py      # Azure OpenAI client configuration
+│   ├── functions.py          # Tool functions and ChromaDB integration
+│   ├── context_manager.py    # Session and context management
+│   ├── ticket_management.py  # Enhanced ticket system
+│   ├── knowledge_base.py     # Legacy knowledge base
+│   ├── tools/                # Enhanced feature modules
+│   │   ├── __init__.py       # Package initialization
+│   │   ├── faq_handler.py    # ChromaDB knowledge base handler
+│   │   └── voice_handler.py  # HuggingFace TTS integration
+│   └── data/                 # Knowledge base data
+│       ├── __init__.py       # Package initialization
+│       └── mock_data.py      # IT knowledge database
+├── frontend/                  # React frontend
 │   ├── src/
 │   │   ├── App.jsx           # Main application with audio support
 │   │   ├── api.js            # API communication layer
+│   │   ├── main.jsx          # React entry point
+│   │   ├── index.css         # Global styles
 │   │   └── components/
 │   │       ├── ChatWindow.jsx    # Chat interface with audio playback
 │   │       └── MessageBubble.jsx # Message component with audio indicators
 │   ├── index.html            # HTML template
 │   ├── package.json          # Frontend dependencies
+│   ├── postcss.config.js     # PostCSS configuration
 │   ├── tailwind.config.js    # Tailwind CSS configuration
 │   └── vite.config.js        # Vite build configuration
-├── chromadb_data/             # ChromaDB persistent storage
-├── requirements.txt           # Python dependencies (enhanced)
-├── setup_enhanced.sh          # Easy setup script
-├── env.template              # Environment variables (updated)
-└── README.md                 # This documentation
+├── chromadb_data/            # ChromaDB persistent storage
+│   └── chroma.sqlite3        # ChromaDB database file
+├── logs/                     # Application logs directory
+├── requirements.txt          # Python dependencies (enhanced)
+├── setup_enhanced.sh         # Easy setup script
+├── env.template             # Environment variables template
+├── package.json             # Root package.json for workspace
+└── README.md                # This documentation
+```
 
 ## 🚀 Enhanced Features Guide
 
@@ -279,6 +343,23 @@ For support, please:
 1. Check the [API documentation](http://localhost:8000/docs) when running locally
 2. Open an issue on GitHub
 3. Contact the development team
+
+### Troubleshooting
+
+**Backend not starting?**
+- Ensure Python virtual environment is activated
+- Check that all dependencies are installed: `pip install -r requirements.txt`
+- Verify your `.env` file has correct Azure OpenAI credentials
+
+**Frontend not starting?**
+- Ensure Node.js is installed (version 16+)
+- Run `npm install` in the frontend directory
+- Check for any npm error messages
+
+**VS Code Tasks not working?**
+- Ensure you're opening the project from the root directory
+- Check that the `.vscode/tasks.json` file exists
+- Verify the Python virtual environment path in tasks.json
 
 ## 🔮 Roadmap
 
