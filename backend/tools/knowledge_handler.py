@@ -149,7 +149,8 @@ class ITKnowledgeBase:
             try:
                 # Return status from vector store
                 status = {}
-                namespaces = ["faqs", "kb_articles", "policies", "troubleshooting"]
+                namespaces = ["faqs", "kb_articles",
+                              "policies", "troubleshooting"]
                 for namespace in namespaces:
                     # For Pinecone, this would require querying the index stats
                     # For now, return a placeholder
@@ -162,7 +163,7 @@ class ITKnowledgeBase:
             # Return fallback status
             return {
                 "faqs": 10,
-                "kb_articles": 6, 
+                "kb_articles": 6,
                 "policies": 0,
                 "troubleshooting": 2
             }

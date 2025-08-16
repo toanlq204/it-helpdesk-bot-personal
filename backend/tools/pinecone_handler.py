@@ -26,7 +26,18 @@ class VectorStoreManager:
         """Initialize Pinecone client and embeddings"""
         self.api_key = os.getenv("PINECONE_API_KEY")
         self.index_name = os.getenv("PINECONE_INDEX_NAME", "it-helpdesk-kb")
-        self.dimension = 1536  # Azure OpenAI text-embedding-3-large dimension
+
+        # Get embedding model from environment
+        embedding_model = os.getenv(
+            "AZOPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+
+        # Set dimension based on model
+        if "text-embedding-3-large" in embedding_model:
+            self.dimension = 3072  # text-embedding-3-large dimension
+        elif "text-embedding-3-small" in embedding_model:
+            self.dimension = 1536  # text-embedding-3-small dimension
+        else:
+            self.dimension = 1536  # Default fallback
 
         if not self.api_key:
             raise ValueError(
@@ -38,7 +49,7 @@ class VectorStoreManager:
         # Initialize Azure OpenAI embeddings
         self.embeddings = AzureOpenAIEmbeddings(
             model=os.getenv("AZOPENAI_EMBEDDING_MODEL",
-                            "text-embedding-3-large"),
+                            "text-embedding-3-small"),
             azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
             api_version=os.getenv(
