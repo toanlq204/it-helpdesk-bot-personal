@@ -24,6 +24,15 @@ from .context_manager import (
 )
 from .ticket_management import get_ticket_statistics
 
+# Import new enhanced features
+try:
+    from .tools.faq_handler import get_knowledge_base
+    from .data.mock_data import get_all_knowledge_data
+    ENHANCED_FEATURES_AVAILABLE = True
+except ImportError as e:
+    print(f"Enhanced features not available: {e}")
+    ENHANCED_FEATURES_AVAILABLE = False
+
 # Configuration constants
 MAX_TOOL_TURNS = 6  # Maximum tool calling iterations
 MAX_MESSAGE_HISTORY = 40  # Maximum messages to keep in session
@@ -47,22 +56,25 @@ app.add_middleware(
 SYSTEM_PROMPT = """You are an advanced IT Helpdesk assistant for an enterprise environment.
 
 🔧 **Core Capabilities:**
-- Comprehensive knowledge base with detailed troubleshooting guides
+- Comprehensive ChromaDB knowledge base with FAQs, software guides, and IT policies
 - Enhanced FAQ database with smart matching
 - Interactive step-by-step troubleshooting flows
 - Advanced ticket management with auto-categorization
 - Multi-turn conversation context awareness
+- Voice response capabilities
 
 🎯 **Your Approach:**
 - Be helpful, concise, and professional
-- Use the knowledge base and troubleshooting flows for complex issues
+- Search the ChromaDB knowledge base first for comprehensive information
+- Use the legacy knowledge base and troubleshooting flows as backup
 - Create tickets when hands-on assistance is needed
 - Remember context from previous interactions in the conversation
 - Handle follow-up questions intelligently
 - Process multiple questions efficiently when asked together
 
 🛠️ **Available Tools:**
-- Search knowledge base articles for detailed solutions
+- Search ChromaDB knowledge base for FAQs, software guides, and policies
+- Search legacy knowledge base articles for detailed solutions
 - Access enhanced FAQ database
 - Start interactive troubleshooting flows (wifi_issues, printer_issues, email_issues)
 - Create and track support tickets with priorities
@@ -70,13 +82,54 @@ SYSTEM_PROMPT = """You are an advanced IT Helpdesk assistant for an enterprise e
 - Get helpdesk statistics
 
 💡 **Guidelines:**
-- Always search the knowledge base first for technical issues
+- Always search the ChromaDB knowledge base first for comprehensive IT information
+- Use legacy knowledge base search for complex technical articles
 - Use troubleshooting flows for common problems (Wi-Fi, printers, email)
 - Create tickets for issues requiring hands-on support or when solutions don't work
 - Maintain conversation context and handle follow-ups like "that didn't work"
 - Be proactive in suggesting next steps or alternatives
 
 Remember: You can handle multiple questions at once and maintain context throughout the conversation."""
+
+
+def initialize_knowledge_base():
+    """Initialize ChromaDB with mock IT data on startup"""
+    if not ENHANCED_FEATURES_AVAILABLE:
+        print("ChromaDB not available, skipping knowledge base initialization")
+        return
+
+    try:
+        kb = get_knowledge_base()
+
+        # Check if data is already loaded
+        status = kb.check_collection_status()
+        total_docs = sum(status.values())
+
+        if total_docs > 0:
+            print(
+                f"Knowledge base already initialized with {total_docs} documents")
+            return
+
+        # Load mock data
+        print("Initializing ChromaDB knowledge base with mock IT data...")
+        all_data = get_all_knowledge_data()
+
+        for collection_name, documents in all_data.items():
+            kb.add_knowledge(collection_name, documents)
+            print(
+                f"Added {len(documents)} documents to {collection_name} collection")
+
+        final_status = kb.check_collection_status()
+        total_final = sum(final_status.values())
+        print(
+            f"Knowledge base initialization complete. Total documents: {total_final}")
+
+    except Exception as e:
+        print(f"Error initializing knowledge base: {e}")
+
+
+# Initialize knowledge base on startup
+initialize_knowledge_base()
 
 
 def get_session_messages(session_id: str) -> List[Dict[str, str]]:
@@ -87,7 +140,20 @@ def get_session_messages(session_id: str) -> List[Dict[str, str]]:
         # Initialize with enhanced system prompt
         session["messages"] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    return session["messages"]
+    # Clean the messages to remove any tool-related messages that might cause issues
+    cleaned_messages = []
+    for msg in session["messages"]:
+        # Only keep user, assistant, and system messages for OpenAI API
+        if msg.get("role") in ["user", "assistant", "system"]:
+            cleaned_msg = {
+                "role": msg["role"],
+                "content": msg.get("content", "")
+            }
+            # Only add non-empty messages
+            if cleaned_msg["content"].strip():
+                cleaned_messages.append(cleaned_msg)
+
+    return cleaned_messages
 
 
 def enhanced_split_into_subqueries(user_text: str, session_id: str) -> List[str]:
@@ -208,6 +274,9 @@ def chat(req: ChatRequest):
 
         # Enhanced tool calling loop with better context management
         tool_turns = 0
+        final_response = ""
+        tool_results_accumulated = []
+
         while tool_turns < MAX_TOOL_TURNS:
             completion = client.chat.completions.create(
                 model=MODEL_NAME,
@@ -219,26 +288,9 @@ def chat(req: ChatRequest):
             msg = completion.choices[0].message
 
             if msg.tool_calls:
-                # Convert tool calls to dict format for messages
-                tool_calls_dict = [
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments
-                        }
-                    }
-                    for tc in msg.tool_calls
-                ]
+                # Process tool calls and accumulate results
+                tool_results = []
 
-                messages.append({
-                    "role": "assistant",
-                    "content": msg.content or "",
-                    "tool_calls": tool_calls_dict
-                })
-
-                # Process each tool call and update context
                 for tool_call in msg.tool_calls:
                     name = tool_call.function.name
                     arguments = tool_call.function.arguments
@@ -247,22 +299,39 @@ def chat(req: ChatRequest):
                     # Update conversation context based on tool usage
                     update_context_for_tool_call(
                         name, arguments, result, req.session_id)
+                    tool_results.append(result)
 
-                    # Add function result to messages
+                # Accumulate all tool results
+                tool_results_accumulated.extend(tool_results)
+
+                # Create a summary of tool results for the next iteration
+                if tool_results:
+                    tool_summary = "\n\n".join(tool_results)
+                    # Add the tool results as a system message to guide the next response
                     messages.append({
-                        "role": "tool",
-                        "content": result,
-                        "tool_call_id": tool_call.id
+                        "role": "user",
+                        "content": f"Based on the tool results: {tool_summary}\n\nPlease provide a helpful response to the user."
                     })
 
                 tool_turns += 1
                 continue
             else:
                 # No more tool calls → this is the final answer
-                assistant_text = msg.content or "I'm here to help with your IT needs."
+                final_response = msg.content or "I'm here to help with your IT needs."
                 messages.append(
-                    {"role": "assistant", "content": assistant_text})
+                    {"role": "assistant", "content": final_response})
                 break
+
+        # If we have tool results but no final response, create one from the tool results
+        if not final_response and tool_results_accumulated:
+            final_response = "\n\n".join(tool_results_accumulated)
+            messages.append({"role": "assistant", "content": final_response})
+        elif not final_response:
+            final_response = "I'm here to help with your IT needs."
+            messages.append({"role": "assistant", "content": final_response})
+
+        # Store cleaned messages back to session (only user, assistant, system)
+        session["messages"] = messages
 
         # Trim message history if needed
         trim_message_history(messages, session)
@@ -281,7 +350,7 @@ def chat(req: ChatRequest):
         ticket_stats = get_ticket_statistics()
 
         return ChatResponse(
-            reply=history_for_client[-1].content if history_for_client else "",
+            reply=final_response,
             messages=history_for_client,
             tickets=[],  # Empty list for backward compatibility
             stats=ticket_stats
@@ -298,25 +367,48 @@ def health():
     """Enhanced health check endpoint with system statistics"""
     try:
         ticket_stats = get_ticket_statistics()
+
+        # Check knowledge base status
+        kb_status = {"available": False, "collections": {}}
+        if ENHANCED_FEATURES_AVAILABLE:
+            try:
+                kb = get_knowledge_base()
+                kb_status = {
+                    "available": True,
+                    "collections": kb.check_collection_status()
+                }
+            except Exception as e:
+                kb_status["error"] = str(e)
+
+        features = [
+            "Knowledge Base Search",
+            "Interactive Troubleshooting",
+            "Enhanced Ticket Management",
+            "Multi-turn Context Memory",
+            "Batch Request Processing"
+        ]
+
+        if ENHANCED_FEATURES_AVAILABLE:
+            features.extend([
+                "ChromaDB Knowledge Base"
+                # "Voice Response (TTS)"  # Temporarily disabled
+            ])
+
         return {
             "status": "ok",
             "tickets_total": ticket_stats.get("total", 0),
             "tickets_open": ticket_stats.get("by_status", {}).get("Open", 0),
             "tickets_in_progress": ticket_stats.get("by_status", {}).get("In Progress", 0),
-            "system": "IT Helpdesk Bot - Enhanced Edition",
-            "features": [
-                "Knowledge Base Search",
-                "Interactive Troubleshooting",
-                "Enhanced Ticket Management",
-                "Multi-turn Context Memory",
-                "Batch Request Processing"
-            ]
+            "system": "IT Helpdesk Bot - Enhanced Edition v2.0",
+            "features": features,
+            "knowledge_base": kb_status,
+            "enhanced_features": ENHANCED_FEATURES_AVAILABLE
         }
     except Exception as e:
         return {
             "status": "error",
             "error": str(e),
-            "system": "IT Helpdesk Bot - Enhanced Edition"
+            "system": "IT Helpdesk Bot - Enhanced Edition v2.0"
         }
 
 

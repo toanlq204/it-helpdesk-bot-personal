@@ -17,6 +17,35 @@ from .ticket_management import (
     simulate_ticket_progress
 )
 
+# Import new ChromaDB functionality
+try:
+    from .tools.faq_handler import query_it_knowledge
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+    print("ChromaDB not available, using legacy knowledge base")
+
+
+def search_chromadb_knowledge(query: str, collection: str = None) -> str:
+    """Search ChromaDB knowledge base for relevant IT information"""
+    if not CHROMADB_AVAILABLE:
+        # Fallback to legacy knowledge base if ChromaDB is not available
+        return search_knowledge_base_articles(query, 3)
+
+    try:
+        context = query_it_knowledge(query, collection)
+
+        if "No relevant knowledge found" in context or "Error accessing" in context:
+            # Fallback to legacy search if ChromaDB fails
+            return search_knowledge_base_articles(query, 3)
+
+        return context + "\n\n💡 This information comes from our comprehensive IT knowledge base. Would you like more specific details about any of these topics?"
+
+    except Exception as e:
+        # Fallback to legacy search on any error
+        print(f"ChromaDB error, using fallback: {e}")
+        return search_knowledge_base_articles(query, 3)
+
 
 def search_knowledge_base_articles(query: str, max_results: int = 3) -> str:
     """Search comprehensive knowledge base for relevant IT help articles"""
@@ -334,6 +363,21 @@ def get_tools_schema() -> List[Dict[str, Any]]:
                 }
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_chromadb_knowledge",
+                "description": "Search comprehensive IT knowledge base using ChromaDB for FAQs, software guides, and IT policies",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query for knowledge base"},
+                        "collection": {"type": "string", "description": "Specific collection to search (faqs, software, policies) or leave empty for all"}
+                    },
+                    "required": ["query"]
+                }
+            },
+        },
     ]
 
 
@@ -365,7 +409,11 @@ def call_tool_by_name(name: str, arguments_json: str) -> str:
         ),
         "start_troubleshooting_flow": lambda: start_troubleshooting_flow(args.get("issue_type", "")),
         "get_software_info": lambda: get_software_info(args.get("name", "")),
-        "get_helpdesk_stats": lambda: get_helpdesk_stats()
+        "get_helpdesk_stats": lambda: get_helpdesk_stats(),
+        "search_chromadb_knowledge": lambda: search_chromadb_knowledge(
+            args.get("query", ""),
+            args.get("collection")
+        )
     }
 
     if name in function_map:
