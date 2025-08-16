@@ -49,16 +49,30 @@ def search_knowledge_with_vector_store(query: str, collection: str = None) -> st
 
 # Workshop 4 Enhanced Functions
 def search_enhanced_vector_store(query: str, namespace: str = None) -> str:
-    """Enhanced vector search using Pinecone (Workshop 4)"""
+    """Enhanced vector search using Pinecone (Workshop 4) with improved relevance filtering"""
     try:
         from .tools.pinecone_handler import query_pinecone_knowledge
-        result = query_pinecone_knowledge(query, namespace)
+
+        # Use the improved query function with better filtering
+        result = query_pinecone_knowledge(query, namespace, max_results=3)
+
+        # Check if we got meaningful results
+        if "No relevant knowledge found" in result or "No highly relevant information found" in result:
+            # Try with broader search if no results
+            if namespace:
+                # Try searching all namespaces if specific namespace had no results
+                result = query_pinecone_knowledge(query, None, max_results=3)
+
+        if "No relevant knowledge found" in result or "No highly relevant information found" in result:
+            return "I couldn't find relevant information in our knowledge base for your specific query. Please try rephrasing your question or ask for help with a specific IT topic like 'VPN setup', 'password reset', or 'network troubleshooting'."
+
         return result + "\n\n🚀 **Enhanced with Workshop 4 Pinecone Vector Search**"
     except ImportError:
         # Fallback to vector store
         return search_knowledge_with_vector_store(query)
     except Exception as e:
         # Fallback to legacy search
+        print(f"Enhanced vector search error: {e}")
         return search_knowledge_base_articles(query, 3)
 
 

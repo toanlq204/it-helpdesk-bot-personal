@@ -361,12 +361,21 @@ def chat(req: ChatRequest):
                 # Try Pinecone first if available
                 if PINECONE_AVAILABLE:
                     try:
-                        vector_result = query_vector_knowledge(req.message)
-                        if vector_result and "No relevant knowledge found" not in vector_result:
+                        vector_result = query_vector_knowledge(
+                            req.message, max_results=3)
+                        # Check if we got meaningful results
+                        if (vector_result and
+                            "No relevant knowledge found" not in vector_result and
+                            "No highly relevant information found" not in vector_result and
+                                "Error accessing vector" not in vector_result):
+
                             final_response = vector_result
                             features_used.append("pinecone_vector_search")
                             ai_enhanced = True
                             vector_search_attempted = True
+                        else:
+                            logger.info(
+                                f"Pinecone search returned no relevant results for: {req.message}")
                     except Exception as e:
                         logger.warning(f"Pinecone search failed: {e}")
 

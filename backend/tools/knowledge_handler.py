@@ -83,15 +83,22 @@ class ITKnowledgeBase:
                         "troubleshooting": "troubleshooting"
                     }
                     namespace = namespace_mapping.get(collection, "faqs")
-                    results = self.vector_store_manager.search_documents(
-                        query, namespace, k=limit)
+                    results = self.vector_store_manager.search(
+                        query, namespace, k=limit, score_threshold=0.7)
                 else:
-                    # Search all namespaces
+                    # Search all namespaces with improved relevance filtering
                     namespace_results = self.vector_store_manager.search_all_namespaces(
-                        query, k=limit)
+                        query, k=limit, score_threshold=0.7)
                     results = []
                     for namespace, docs in namespace_results.items():
-                        results.extend(docs)
+                        # Only add results that are actually relevant
+                        relevant_docs = [doc for doc in docs if doc.get(
+                            'relevance_score', 0) >= 0.7]
+                        results.extend(relevant_docs)
+
+                    # Sort by relevance score
+                    results.sort(key=lambda x: x.get(
+                        'relevance_score', 0), reverse=True)
 
                 return results
 

@@ -211,35 +211,60 @@ class VectorStoreManager:
             return False
 
     def search(self, query: str, namespace: str = "faqs", k: int = 5,
-               score_threshold: float = 0.2) -> List[Dict[str, Any]]:
-        """Search for relevant documents in specified namespace using raw Pinecone"""
+               score_threshold: float = 0.7) -> List[Dict[str, Any]]:
+        """Search for relevant documents in specified namespace using raw Pinecone with improved relevance filtering"""
         try:
             # Use raw Pinecone search for better control
             query_embedding = self.embeddings.embed_query(query)
 
+            # Increase search results to apply better filtering
             search_result = self.index.query(
                 vector=query_embedding,
-                top_k=k,
+                top_k=min(k * 3, 20),  # Get more results for filtering
                 include_metadata=True,
                 namespace=namespace
             )
 
-            # Format results
+            # Format and filter results with improved relevance scoring
             results = []
-            for match in search_result.matches:
-                if match.score >= score_threshold:
-                    # Extract content from metadata
-                    content = match.metadata.get(
-                        'text', 'No content available')
+            query_keywords = set(query.lower().split())
 
+            for match in search_result.matches:
+                # Extract content from metadata
+                content = match.metadata.get('text', 'No content available')
+
+                # Enhanced relevance scoring
+                base_score = match.score
+
+                # Boost score if query keywords appear in content or metadata
+                keyword_boost = 0
+                content_lower = content.lower()
+
+                for keyword in query_keywords:
+                    if keyword in content_lower:
+                        keyword_boost += 0.1
+                    if keyword in match.metadata.get('category', '').lower():
+                        keyword_boost += 0.15
+                    if keyword in match.metadata.get('title', '').lower():
+                        keyword_boost += 0.2
+
+                # Apply keyword boost
+                enhanced_score = min(base_score + keyword_boost, 1.0)
+
+                # Only include results that meet the threshold
+                if enhanced_score >= score_threshold:
                     result = {
                         "content": content,
                         "metadata": match.metadata,
-                        "relevance_score": match.score,
+                        "relevance_score": enhanced_score,
                         "namespace": namespace,
                         "id": match.id
                     }
                     results.append(result)
+
+            # Sort by enhanced score and limit to requested number
+            results.sort(key=lambda x: x['relevance_score'], reverse=True)
+            results = results[:k]
 
             logger.info(
                 f"Found {len(results)} relevant documents in namespace '{namespace}'")
@@ -250,14 +275,43 @@ class VectorStoreManager:
             return []
 
     def search_all_namespaces(self, query: str, k: int = 3,
-                              score_threshold: float = 0.2) -> Dict[str, List[Dict[str, Any]]]:
-        """Search across all namespaces and return organized results"""
+                              score_threshold: float = 0.7) -> Dict[str, List[Dict[str, Any]]]:
+        """Search across all namespaces and return organized results with improved relevance filtering"""
         all_results = {}
+
+        # Extract keywords for better filtering
+        query_keywords = set(query.lower().split())
 
         for namespace in self.vector_stores.keys():
             results = self.search(query, namespace, k, score_threshold)
-            if results:
-                all_results[namespace] = results
+
+            # Additional filtering based on query relevance
+            filtered_results = []
+            for result in results:
+                content = result['content'].lower()
+                metadata = result['metadata']
+
+                # Check if result is actually relevant to the query
+                relevance_indicators = 0
+
+                # Count keyword matches
+                for keyword in query_keywords:
+                    if keyword in content:
+                        relevance_indicators += 1
+                    if keyword in metadata.get('category', '').lower():
+                        relevance_indicators += 1
+                    if keyword in metadata.get('title', '').lower():
+                        relevance_indicators += 2
+
+                # Only include if there's some relevance
+                if relevance_indicators > 0 or result['relevance_score'] > 0.85:
+                    filtered_results.append(result)
+
+            if filtered_results:
+                # Sort by relevance and limit results
+                filtered_results.sort(
+                    key=lambda x: x['relevance_score'], reverse=True)
+                all_results[namespace] = filtered_results[:k]
 
         return all_results
 
@@ -314,37 +368,67 @@ def get_vector_store_manager() -> VectorStoreManager:
     return _vector_store_manager
 
 
-def query_vector_knowledge(query: str, namespace: str = None, max_results: int = 5) -> str:
-    """Query vector knowledge base and return formatted response"""
+def query_vector_knowledge(query: str, namespace: str = None, max_results: int = 3) -> str:
+    """Query vector knowledge base and return formatted response with improved relevance filtering"""
     try:
         manager = get_vector_store_manager()
 
         if namespace:
             # Search specific namespace
-            results = manager.search(query, namespace, k=max_results)
+            results = manager.search(
+                query, namespace, k=max_results, score_threshold=0.7)
             namespace_results = {namespace: results}
         else:
-            # Search all namespaces
+            # Search all namespaces with higher threshold for better relevance
             namespace_results = manager.search_all_namespaces(
-                query, k=max_results)
+                query, k=max_results, score_threshold=0.7)
 
         if not namespace_results:
             return "No relevant knowledge found in the vector database."
 
-        # Format response
-        formatted_response = "🔍 **Knowledge Base Search Results:**\n\n"
+        # Count total relevant results
+        total_results = sum(len(results)
+                            for results in namespace_results.values())
+
+        if total_results == 0:
+            return "No highly relevant information found for your query. Please try rephrasing your question or be more specific."
+
+        # Format response with better structure
+        formatted_response = f"🔍 **Found {total_results} relevant result(s):**\n\n"
 
         for ns, results in namespace_results.items():
             if results:
-                formatted_response += f"**{ns.title()} ({len(results)} results):**\n"
+                # Sort results by relevance score
+                results.sort(key=lambda x: x['relevance_score'], reverse=True)
+
+                formatted_response += f"📁 **{ns.replace('_', ' ').title()}:**\n"
 
                 for i, result in enumerate(results, 1):
                     content = result['content']
                     score = result['relevance_score']
                     category = result['metadata'].get('category', 'General')
 
-                    formatted_response += f"{i}. **{category}** (Relevance: {score:.2f})\n"
-                    formatted_response += f"   {content[:300]}{'...' if len(content) > 300 else ''}\n\n"
+                    # Truncate content intelligently at sentence boundaries
+                    if len(content) > 250:
+                        # Try to cut at sentence boundary
+                        truncated = content[:250]
+                        last_period = truncated.rfind('.')
+                        last_question = truncated.rfind('?')
+                        last_exclamation = truncated.rfind('!')
+
+                        cut_point = max(
+                            last_period, last_question, last_exclamation)
+                        if cut_point > 100:  # Ensure we have reasonable content
+                            content = content[:cut_point + 1]
+                        else:
+                            content = content[:250] + "..."
+
+                    formatted_response += f"   {i}. **{category}** (Relevance: {score:.1f})\n"
+                    formatted_response += f"      {content}\n\n"
+
+        # Add helpful footer only if we found good results
+        if total_results > 0:
+            formatted_response += "💡 *Need more specific information? Feel free to ask follow-up questions.*"
 
         return formatted_response.strip()
 
@@ -354,6 +438,6 @@ def query_vector_knowledge(query: str, namespace: str = None, max_results: int =
 
 
 # Alias for backward compatibility
-def query_pinecone_knowledge(query: str, namespace: str = None, max_results: int = 5) -> str:
+def query_pinecone_knowledge(query: str, namespace: str = None, max_results: int = 3) -> str:
     """Alias for query_vector_knowledge for backward compatibility"""
     return query_vector_knowledge(query, namespace, max_results)
