@@ -6,12 +6,14 @@ import { sendMessage, health } from "./api.js";
 export default function App() {
     // State for managing chat messages
     const [messages, setMessages] = useState([
-        { role: "assistant", content: "Hello there! 👋 Welcome to your **Enhanced IT Helpdesk Assistant**! \n\n🚀 **New Advanced Features:**\n\n🔍 **Smart Knowledge Base Search** - Get detailed troubleshooting guides\n🛠️ **Interactive Troubleshooting** - Step-by-step guidance for Wi-Fi, printers, and email\n🎫 **Enhanced Ticket Management** - Auto-categorized tickets with priority levels\n🧠 **Context Memory** - I remember our conversation and handle follow-ups\n📦 **Batch Processing** - Ask multiple questions at once!\n\n� **Try asking:**\n• \"How to fix slow Wi-Fi? Also, how do I reset my password?\"\n• \"Start troubleshooting my printer issues\"\n• \"Search knowledge base for VPN problems\"\n• \"Create a ticket for my broken laptop screen\"\n• \"Show me all my tickets\"\n\nHow can I help you today?" }
+        { role: "assistant", content: "Hello there! 👋 Welcome to your **Enhanced IT Helpdesk Assistant**! \n\n🚀 **New Advanced Features:**\n\n🔍 **Smart Knowledge Base Search** - Get detailed troubleshooting guides\n🛠️ **Interactive Troubleshooting** - Step-by-step guidance for Wi-Fi, printers, and email\n🎫 **Enhanced Ticket Management** - Auto-categorized tickets with priority levels\n🧠 **Context Memory** - I remember our conversation and handle follow-ups\n📦 **Batch Processing** - Ask multiple questions at once!\n🔊 **Voice Responses** - Hear answers with text-to-speech\n\n� **Try asking:**\n• \"How to fix slow Wi-Fi? Also, how do I reset my password?\"\n• \"Start troubleshooting my printer issues\"\n• \"Search knowledge base for VPN problems\"\n• \"Create a ticket for my broken laptop screen\"\n• \"Show me all my tickets\"\n\nHow can I help you today?" }
     ]);
     const [input, setInput] = useState("");
     const [serverHealth, setServerHealth] = useState(null);
     const [loading, setLoading] = useState(false);
     const [ticketStats, setTicketStats] = useState(null);
+    const [audioData, setAudioData] = useState(null);
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
     // Generate or retrieve session ID from localStorage
     const sessionId = useMemo(() => {
@@ -44,6 +46,8 @@ export default function App() {
         setMessages((prev) => [...prev, { role: "user", content: text }]);
         setInput("");
         setLoading(true);
+        setAudioData(null); // Clear previous audio data
+
         try {
             const res = await sendMessage(sessionId, text);
             // Server returns full history (user + assistant). We only add the new assistant message:
@@ -53,6 +57,11 @@ export default function App() {
             if (res.stats) {
                 setTicketStats(res.stats.total || 0);
             }
+
+            // Handle audio response if available
+            if (res.audio && res.audio.audio_data) {
+                setAudioData(res.audio);
+            }
         } catch (e) {
             setMessages((prev) => [
                 ...prev,
@@ -61,6 +70,10 @@ export default function App() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleAudioPlay = (playing) => {
+        setIsAudioPlaying(playing);
     };
 
     const onKey = (e) => {
@@ -117,7 +130,12 @@ export default function App() {
 
                 {/* Chat Window with enhanced styling */}
                 <div className="glass-dark rounded-2xl p-2 shadow-2xl" style={{ height: '500px' }}>
-                    <ChatWindow messages={messages} loading={loading} />
+                    <ChatWindow
+                        messages={messages}
+                        loading={loading}
+                        audioData={audioData}
+                        onAudioPlay={handleAudioPlay}
+                    />
                 </div>
 
                 {/* Input area with improved design */}
@@ -125,7 +143,7 @@ export default function App() {
                     <div className="flex gap-4">
                         <div className="flex-1 relative">
                             <textarea
-                                className="w-full rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 p-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300 resize-none"
+                                className={`w-full rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 p-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300 resize-none ${isAudioPlaying ? 'border-blue-400/50' : ''}`}
                                 rows={2}
                                 placeholder="💬 Try: 'How to reset password? Also, start Wi-Fi troubleshooting' or 'Create ticket for broken printer'"
                                 value={input}
@@ -175,8 +193,8 @@ export default function App() {
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm font-medium">� Enhanced Features Active:</p>
-                            <p className="text-xs opacity-75">Smart troubleshooting • Context memory • Batch questions • Auto-categorized tickets • Knowledge base search</p>
+                            <p className="text-sm font-medium">🚀 Enhanced Features Active:</p>
+                            <p className="text-xs opacity-75">Smart troubleshooting • Context memory • Batch questions • Auto-categorized tickets • Knowledge base search • Voice responses</p>
                         </div>
                     </div>
                 </footer>

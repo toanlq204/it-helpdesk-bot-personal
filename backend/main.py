@@ -24,6 +24,16 @@ from .context_manager import (
 )
 from .ticket_management import get_ticket_statistics
 
+# Import new enhanced features
+try:
+    from .tools.faq_handler import get_knowledge_base
+    from .tools.voice_handler import generate_voice_response
+    from .data.mock_data import get_all_knowledge_data
+    ENHANCED_FEATURES_AVAILABLE = True
+except ImportError as e:
+    print(f"Enhanced features not available: {e}")
+    ENHANCED_FEATURES_AVAILABLE = False
+
 # Configuration constants
 MAX_TOOL_TURNS = 6  # Maximum tool calling iterations
 MAX_MESSAGE_HISTORY = 40  # Maximum messages to keep in session
@@ -47,22 +57,25 @@ app.add_middleware(
 SYSTEM_PROMPT = """You are an advanced IT Helpdesk assistant for an enterprise environment.
 
 🔧 **Core Capabilities:**
-- Comprehensive knowledge base with detailed troubleshooting guides
+- Comprehensive ChromaDB knowledge base with FAQs, software guides, and IT policies
 - Enhanced FAQ database with smart matching
 - Interactive step-by-step troubleshooting flows
 - Advanced ticket management with auto-categorization
 - Multi-turn conversation context awareness
+- Voice response capabilities
 
 🎯 **Your Approach:**
 - Be helpful, concise, and professional
-- Use the knowledge base and troubleshooting flows for complex issues
+- Search the ChromaDB knowledge base first for comprehensive information
+- Use the legacy knowledge base and troubleshooting flows as backup
 - Create tickets when hands-on assistance is needed
 - Remember context from previous interactions in the conversation
 - Handle follow-up questions intelligently
 - Process multiple questions efficiently when asked together
 
 🛠️ **Available Tools:**
-- Search knowledge base articles for detailed solutions
+- Search ChromaDB knowledge base for FAQs, software guides, and policies
+- Search legacy knowledge base articles for detailed solutions
 - Access enhanced FAQ database
 - Start interactive troubleshooting flows (wifi_issues, printer_issues, email_issues)
 - Create and track support tickets with priorities
@@ -70,13 +83,54 @@ SYSTEM_PROMPT = """You are an advanced IT Helpdesk assistant for an enterprise e
 - Get helpdesk statistics
 
 💡 **Guidelines:**
-- Always search the knowledge base first for technical issues
+- Always search the ChromaDB knowledge base first for comprehensive IT information
+- Use legacy knowledge base search for complex technical articles
 - Use troubleshooting flows for common problems (Wi-Fi, printers, email)
 - Create tickets for issues requiring hands-on support or when solutions don't work
 - Maintain conversation context and handle follow-ups like "that didn't work"
 - Be proactive in suggesting next steps or alternatives
 
 Remember: You can handle multiple questions at once and maintain context throughout the conversation."""
+
+
+def initialize_knowledge_base():
+    """Initialize ChromaDB with mock IT data on startup"""
+    if not ENHANCED_FEATURES_AVAILABLE:
+        print("ChromaDB not available, skipping knowledge base initialization")
+        return
+
+    try:
+        kb = get_knowledge_base()
+
+        # Check if data is already loaded
+        status = kb.check_collection_status()
+        total_docs = sum(status.values())
+
+        if total_docs > 0:
+            print(
+                f"Knowledge base already initialized with {total_docs} documents")
+            return
+
+        # Load mock data
+        print("Initializing ChromaDB knowledge base with mock IT data...")
+        all_data = get_all_knowledge_data()
+
+        for collection_name, documents in all_data.items():
+            kb.add_knowledge(collection_name, documents)
+            print(
+                f"Added {len(documents)} documents to {collection_name} collection")
+
+        final_status = kb.check_collection_status()
+        total_final = sum(final_status.values())
+        print(
+            f"Knowledge base initialization complete. Total documents: {total_final}")
+
+    except Exception as e:
+        print(f"Error initializing knowledge base: {e}")
+
+
+# Initialize knowledge base on startup
+initialize_knowledge_base()
 
 
 def get_session_messages(session_id: str) -> List[Dict[str, str]]:
@@ -280,11 +334,21 @@ def chat(req: ChatRequest):
         # Get updated ticket statistics for frontend
         ticket_stats = get_ticket_statistics()
 
+        # Generate voice response if available
+        audio_response = None
+        if ENHANCED_FEATURES_AVAILABLE and history_for_client:
+            try:
+                assistant_reply = history_for_client[-1].content
+                audio_response = generate_voice_response(assistant_reply)
+            except Exception as e:
+                print(f"TTS generation failed: {e}")
+
         return ChatResponse(
             reply=history_for_client[-1].content if history_for_client else "",
             messages=history_for_client,
             tickets=[],  # Empty list for backward compatibility
-            stats=ticket_stats
+            stats=ticket_stats,
+            audio=audio_response
         )
 
     except Exception as e:
@@ -298,25 +362,48 @@ def health():
     """Enhanced health check endpoint with system statistics"""
     try:
         ticket_stats = get_ticket_statistics()
+
+        # Check knowledge base status
+        kb_status = {"available": False, "collections": {}}
+        if ENHANCED_FEATURES_AVAILABLE:
+            try:
+                kb = get_knowledge_base()
+                kb_status = {
+                    "available": True,
+                    "collections": kb.check_collection_status()
+                }
+            except Exception as e:
+                kb_status["error"] = str(e)
+
+        features = [
+            "Knowledge Base Search",
+            "Interactive Troubleshooting",
+            "Enhanced Ticket Management",
+            "Multi-turn Context Memory",
+            "Batch Request Processing"
+        ]
+
+        if ENHANCED_FEATURES_AVAILABLE:
+            features.extend([
+                "ChromaDB Knowledge Base",
+                "Voice Response (TTS)"
+            ])
+
         return {
             "status": "ok",
             "tickets_total": ticket_stats.get("total", 0),
             "tickets_open": ticket_stats.get("by_status", {}).get("Open", 0),
             "tickets_in_progress": ticket_stats.get("by_status", {}).get("In Progress", 0),
-            "system": "IT Helpdesk Bot - Enhanced Edition",
-            "features": [
-                "Knowledge Base Search",
-                "Interactive Troubleshooting",
-                "Enhanced Ticket Management",
-                "Multi-turn Context Memory",
-                "Batch Request Processing"
-            ]
+            "system": "IT Helpdesk Bot - Enhanced Edition v2.0",
+            "features": features,
+            "knowledge_base": kb_status,
+            "enhanced_features": ENHANCED_FEATURES_AVAILABLE
         }
     except Exception as e:
         return {
             "status": "error",
             "error": str(e),
-            "system": "IT Helpdesk Bot - Enhanced Edition"
+            "system": "IT Helpdesk Bot - Enhanced Edition v2.0"
         }
 
 

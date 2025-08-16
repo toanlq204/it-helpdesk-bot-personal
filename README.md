@@ -1,30 +1,43 @@
-# IT Helpdesk Bot - Personal Assistant
+# IT Helpdesk Bot - Enhanced Personal Assistant v2.0
 
-A full-stack AI-powered IT helpdesk chatbot that provides instant support for common IT issues, FAQs, software information, and ticket management. Built with FastAPI backend and React frontend, powered by Azure OpenAI.
+A full-stack AI-powered IT helpdesk chatbot with advanced features including ChromaDB knowledge base, voice responses, and enhanced session management. Built with FastAPI backend and React frontend, powered by Azure OpenAI.
 
-## 🌟 Features
+## 🌟 Enhanced Features
 
+### Core Capabilities
 - **🤖 AI-Powered Chat Assistant**: Intelligent responses using Azure OpenAI's GPT-4o-mini
-- **💡 FAQ Lookup**: Instant answers to frequently asked IT questions
-- **🎫 Ticket Management**: Create and track support tickets
-- **📦 Software Catalog**: Get information about available software and installation links
-- **💬 Multi-Query Support**: Handle multiple questions in a single message
-- **📱 Responsive Design**: Modern UI built with React and Tailwind CSS
-- **🔄 Real-time Updates**: Live chat interface with session management
+- **� ChromaDB Knowledge Base**: Comprehensive IT knowledge search across FAQs, software guides, and policies
+- **🔊 Voice Responses**: Text-to-speech using HuggingFace TTS models
+- **🧠 Context Memory**: Multi-turn conversation awareness and session management
+- **📦 Batch Processing**: Handle multiple questions in a single message
+
+### Advanced Features
+- **� Smart FAQ System**: Enhanced FAQ database with semantic search
+- **🎫 Auto-Categorized Tickets**: Intelligent ticket creation with priority assignment
+- **�️ Interactive Troubleshooting**: Step-by-step guided troubleshooting flows
+- **📊 Real-time Statistics**: Live ticket and system statistics
+- **📱 Responsive Design**: Modern UI with audio playback controls
+
+### Knowledge Base Collections
+- **❓ FAQs**: Password resets, VPN setup, email issues, WiFi troubleshooting
+- **� Software Guides**: Office 365, Slack, Zoom, Git, Adobe Creative Suite
+- **📋 IT Policies**: Security policies, data backup, remote work guidelines
 
 ## 🛠️ Tech Stack
 
 ### Backend
 - **FastAPI**: High-performance Python web framework
 - **Azure OpenAI**: GPT-4o-mini for intelligent responses
+- **ChromaDB**: Vector database for semantic search
+- **Sentence Transformers**: Text embeddings for knowledge retrieval
+- **HuggingFace TTS**: Text-to-speech capabilities
 - **Pydantic**: Data validation and serialization
-- **Uvicorn**: ASGI server for production
 
 ### Frontend
 - **React 18**: Modern React with hooks
 - **Vite**: Fast development build tool
 - **Tailwind CSS**: Utility-first CSS framework
-- **JavaScript ES6+**: Modern JavaScript features
+- **Audio API**: Browser audio playback for voice responses
 
 ## 🚀 Quick Start
 
@@ -32,22 +45,26 @@ A full-stack AI-powered IT helpdesk chatbot that provides instant support for co
 - Python 3.8+
 - Node.js 16+
 - Azure OpenAI API access
+- HuggingFace API token (optional, for TTS)
 
-### 1. Clone the Repository
+### Easy Setup Script
 ```bash
 git clone https://github.com/toanlq204/it-helpdesk-bot-personal.git
 cd it-helpdesk-bot-personal
+./setup_enhanced.sh
 ```
 
-### 2. Backend Setup
+### Manual Setup
 
-#### Create Virtual Environment
+#### 1. Backend Setup
+
+Create and activate virtual environment:
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
-#### Install Dependencies
+Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
@@ -99,23 +116,77 @@ it-helpdesk-bot-personal/
 │   ├── main.py                # Main application and chat endpoint
 │   ├── models.py              # Pydantic data models
 │   ├── openai_client.py       # Azure OpenAI client configuration
-│   ├── functions.py           # Tool functions (FAQ, tickets, software)
-│   └── mock_data.py           # Sample data for testing
+│   ├── functions.py           # Tool functions and ChromaDB integration
+│   ├── context_manager.py     # Session and context management
+│   ├── ticket_management.py   # Enhanced ticket system
+│   ├── knowledge_base.py      # Legacy knowledge base
+│   ├── tools/                 # Enhanced feature modules
+│   │   ├── faq_handler.py     # ChromaDB knowledge base handler
+│   │   └── voice_handler.py   # HuggingFace TTS integration
+│   └── data/                  # Knowledge base data
+│       └── mock_data.py       # IT knowledge database
 ├── frontend/                   # React frontend
 │   ├── src/
-│   │   ├── App.jsx           # Main application component
+│   │   ├── App.jsx           # Main application with audio support
 │   │   ├── api.js            # API communication layer
 │   │   └── components/
-│   │       ├── ChatWindow.jsx    # Chat interface component
-│   │       └── MessageBubble.jsx # Individual message component
+│   │       ├── ChatWindow.jsx    # Chat interface with audio playback
+│   │       └── MessageBubble.jsx # Message component with audio indicators
 │   ├── index.html            # HTML template
 │   ├── package.json          # Frontend dependencies
 │   ├── tailwind.config.js    # Tailwind CSS configuration
 │   └── vite.config.js        # Vite build configuration
-├── requirements.txt           # Python dependencies
-├── package.json              # Root package configuration
-├── env.template              # Environment variables template
-└── README.md                 # Project documentation
+├── chromadb_data/             # ChromaDB persistent storage
+├── requirements.txt           # Python dependencies (enhanced)
+├── setup_enhanced.sh          # Easy setup script
+├── env.template              # Environment variables (updated)
+└── README.md                 # This documentation
+
+## 🚀 Enhanced Features Guide
+
+### ChromaDB Knowledge Base
+The enhanced bot uses ChromaDB for semantic search across three collections:
+
+**FAQs Collection**: Common IT questions and solutions
+- Password reset procedures
+- VPN setup instructions
+- Email configuration
+- WiFi troubleshooting
+
+**Software Collection**: Application guides and installation
+- Microsoft Office 365 setup
+- Slack configuration
+- Zoom installation
+- Development tools (Git, VS Code)
+
+**Policies Collection**: IT policies and procedures
+- Password policies
+- Software installation rules
+- Data backup requirements
+- Remote work guidelines
+
+### Voice Responses
+The bot can convert text responses to speech using HuggingFace TTS:
+- Automatic audio generation for assistant responses
+- Browser-based audio playback
+- Visual indicators during audio playback
+- Fallback to text-only if TTS unavailable
+
+### Context Management
+Enhanced session handling provides:
+- Multi-turn conversation memory
+- Context-aware follow-up questions
+- Automatic session cleanup
+- Conversation state tracking
+
+### Try These Enhanced Commands
+```
+"Search knowledge base for VPN setup"
+"How to reset password? Also start printer troubleshooting"
+"What's the policy for installing new software?"
+"Create a ticket for broken laptop screen"
+"Show me my recent tickets"
+```
 ```
 
 ## 🔧 API Endpoints
