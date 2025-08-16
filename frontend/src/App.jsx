@@ -293,7 +293,7 @@ export default function App() {
                             </div>
                             <div>
                                 <p className="text-sm font-medium">✅ Enhanced IT Helpdesk Features:</p>
-                                <p className="text-xs opacity-75">ChromaDB Knowledge Base • OpenAI SDK • HuggingFace TTS • Context Memory • Smart Troubleshooting</p>
+                                <p className="text-xs opacity-75">Pinecone Vector Store • LangChain RAG • OpenAI SDK • Context Memory • Smart Troubleshooting</p>
                             </div>
                         </div>
 

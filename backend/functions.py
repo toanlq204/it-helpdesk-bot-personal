@@ -17,33 +17,33 @@ from .ticket_management import (
     simulate_ticket_progress
 )
 
-# Import new ChromaDB functionality
+# Import new unified knowledge base functionality
 try:
-    from .tools.faq_handler import query_it_knowledge
-    CHROMADB_AVAILABLE = True
+    from .tools.knowledge_handler import query_it_knowledge
+    VECTOR_STORE_AVAILABLE = True
 except ImportError:
-    CHROMADB_AVAILABLE = False
-    print("ChromaDB not available, using legacy knowledge base")
+    VECTOR_STORE_AVAILABLE = False
+    print("Vector store not available, using legacy knowledge base")
 
 
-def search_chromadb_knowledge(query: str, collection: str = None) -> str:
-    """Search ChromaDB knowledge base for relevant IT information"""
-    if not CHROMADB_AVAILABLE:
-        # Fallback to legacy knowledge base if ChromaDB is not available
+def search_knowledge_with_vector_store(query: str, collection: str = None) -> str:
+    """Search knowledge base using vector store for relevant IT information"""
+    if not VECTOR_STORE_AVAILABLE:
+        # Fallback to legacy knowledge base if vector store is not available
         return search_knowledge_base_articles(query, 3)
 
     try:
         context = query_it_knowledge(query, collection)
 
-        if "No relevant knowledge found" in context or "Error accessing" in context:
-            # Fallback to legacy search if ChromaDB fails
+        if "No relevant knowledge found" in context or "Error" in context:
+            # Fallback to legacy search if vector store fails
             return search_knowledge_base_articles(query, 3)
 
         return context + "\n\n💡 This information comes from our comprehensive IT knowledge base. Would you like more specific details about any of these topics?"
 
     except Exception as e:
         # Fallback to legacy search on any error
-        print(f"ChromaDB error, using fallback: {e}")
+        print(f"Vector store error, using fallback: {e}")
         return search_knowledge_base_articles(query, 3)
 
 
@@ -55,8 +55,8 @@ def search_enhanced_vector_store(query: str, namespace: str = None) -> str:
         result = query_pinecone_knowledge(query, namespace)
         return result + "\n\n🚀 **Enhanced with Workshop 4 Pinecone Vector Search**"
     except ImportError:
-        # Fallback to ChromaDB
-        return search_chromadb_knowledge(query)
+        # Fallback to vector store
+        return search_knowledge_with_vector_store(query)
     except Exception as e:
         # Fallback to legacy search
         return search_knowledge_base_articles(query, 3)
@@ -70,7 +70,7 @@ def enhanced_rag_response(query: str, session_id: str = "default") -> str:
         return result + "\n\n🔗 **Enhanced with Workshop 4 LangChain RAG**"
     except ImportError:
         # Fallback to basic search
-        return search_chromadb_knowledge(query)
+        return search_knowledge_with_vector_store(query)
     except Exception as e:
         # Fallback to legacy search
         return search_knowledge_base_articles(query, 3)
@@ -408,8 +408,8 @@ def get_tools_schema() -> List[Dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "search_chromadb_knowledge",
-                "description": "Search comprehensive IT knowledge base using ChromaDB for FAQs, software guides, and IT policies",
+                "name": "search_knowledge_with_vector_store",
+                "description": "Search comprehensive IT knowledge base using Pinecone vector store for FAQs, software guides, and IT policies",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -498,7 +498,7 @@ def call_tool_by_name(name: str, arguments_json: str) -> str:
         "start_troubleshooting_flow": lambda: start_troubleshooting_flow(args.get("issue_type", "")),
         "get_software_info": lambda: get_software_info(args.get("name", "")),
         "get_helpdesk_stats": lambda: get_helpdesk_stats(),
-        "search_chromadb_knowledge": lambda: search_chromadb_knowledge(
+        "search_knowledge_with_vector_store": lambda: search_knowledge_with_vector_store(
             args.get("query", ""),
             args.get("collection")
         ),

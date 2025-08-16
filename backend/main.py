@@ -27,7 +27,7 @@ from .ticket_management import get_ticket_statistics
 
 # Import new enhanced features
 try:
-    from .tools.faq_handler import get_knowledge_base
+    from .tools.knowledge_handler import get_knowledge_base, initialize_knowledge_base_with_data
     from .data.mock_data import get_all_knowledge_data
     ENHANCED_FEATURES_AVAILABLE = True
 except ImportError as e:
@@ -98,36 +98,15 @@ Remember: You can handle multiple questions at once and maintain context through
 
 
 def initialize_knowledge_base():
-    """Initialize ChromaDB with mock IT data on startup"""
+    """Initialize vector store with mock IT data on startup"""
     if not ENHANCED_FEATURES_AVAILABLE:
-        print("ChromaDB not available, skipping knowledge base initialization")
+        print("Vector store not available, skipping knowledge base initialization")
         return
 
     try:
-        kb = get_knowledge_base()
-
-        # Check if data is already loaded
-        status = kb.check_collection_status()
-        total_docs = sum(status.values())
-
-        if total_docs > 0:
-            print(
-                f"Knowledge base already initialized with {total_docs} documents")
-            return
-
-        # Load mock data
-        print("Initializing ChromaDB knowledge base with mock IT data...")
-        all_data = get_all_knowledge_data()
-
-        for collection_name, documents in all_data.items():
-            kb.add_knowledge(collection_name, documents)
-            print(
-                f"Added {len(documents)} documents to {collection_name} collection")
-
-        final_status = kb.check_collection_status()
-        total_final = sum(final_status.values())
-        print(
-            f"Knowledge base initialization complete. Total documents: {total_final}")
+        print("Initializing vector store knowledge base with mock IT data...")
+        initialize_knowledge_base_with_data()
+        print("Knowledge base initialization complete")
 
     except Exception as e:
         print(f"Error initializing knowledge base: {e}")

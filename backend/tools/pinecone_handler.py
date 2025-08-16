@@ -227,70 +227,10 @@ class VectorStoreManager:
             return False
 
     def migrate_from_chromadb(self, chromadb_handler) -> bool:
-        """Migrate data from existing ChromaDB to Pinecone"""
-        try:
-            from .faq_handler import ITKnowledgeBase
-
-            # Initialize ChromaDB handler if not provided
-            if chromadb_handler is None:
-                chromadb_handler = ITKnowledgeBase()
-
-            # Mapping of ChromaDB collections to Pinecone namespaces
-            collection_mapping = {
-                "faqs": "faqs",
-                "software_guides": "kb_articles",
-                "policies": "policies"
-            }
-
-            migration_success = True
-
-            for chromadb_collection, pinecone_namespace in collection_mapping.items():
-                try:
-                    # Get all documents from ChromaDB collection
-                    if chromadb_collection in chromadb_handler.collections:
-                        collection = chromadb_handler.collections[chromadb_collection]
-
-                        # Get all documents (this is a simplified approach)
-                        # In practice, you might need to batch this for large datasets
-                        results = collection.get()
-
-                        if results and results.get('documents'):
-                            documents = []
-                            for i, doc_text in enumerate(results['documents']):
-                                metadata = results['metadatas'][i] if results.get(
-                                    'metadatas') else {}
-                                doc_id = results['ids'][i] if results.get(
-                                    'ids') else f"migrated_{i}"
-
-                                documents.append({
-                                    'id': doc_id,
-                                    'content': doc_text,
-                                    'category': metadata.get('category', 'General'),
-                                    'source': 'chromadb_migration'
-                                })
-
-                            # Add to Pinecone
-                            if documents:
-                                success = self.add_documents(
-                                    documents, pinecone_namespace)
-                                if not success:
-                                    migration_success = False
-                                    logger.error(
-                                        f"Failed to migrate {chromadb_collection} to {pinecone_namespace}")
-                                else:
-                                    logger.info(
-                                        f"Migrated {len(documents)} documents from {chromadb_collection} to {pinecone_namespace}")
-
-                except Exception as e:
-                    logger.error(
-                        f"Error migrating collection {chromadb_collection}: {e}")
-                    migration_success = False
-
-            return migration_success
-
-        except Exception as e:
-            logger.error(f"Error during ChromaDB migration: {e}")
-            return False
+        """Migrate data from existing ChromaDB to Pinecone - DEPRECATED"""
+        logger.warning(
+            "ChromaDB migration is deprecated as ChromaDB has been removed")
+        return False
 
 
 # Global instance
@@ -342,3 +282,9 @@ def query_vector_knowledge(query: str, namespace: str = None, max_results: int =
     except Exception as e:
         logger.error(f"Error querying vector knowledge: {e}")
         return f"Error accessing vector knowledge base: {str(e)}"
+
+
+# Alias for backward compatibility
+def query_pinecone_knowledge(query: str, namespace: str = None, max_results: int = 5) -> str:
+    """Alias for query_vector_knowledge for backward compatibility"""
+    return query_vector_knowledge(query, namespace, max_results)

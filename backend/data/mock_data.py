@@ -1,4 +1,4 @@
-# Mock IT Knowledge Base Data for ChromaDB
+# Mock IT Knowledge Base Data for Vector Store (Pinecone)
 from typing import List, Dict, Any
 
 

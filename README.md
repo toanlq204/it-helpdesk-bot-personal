@@ -12,7 +12,7 @@ A sophisticated full-stack AI-powered IT helpdesk chatbot with cutting-edge feat
 - **📊 Multi-Modal Integration**: Seamless combination of all AI features
 
 ### Enhanced Knowledge Management
-- **🔍 Semantic Search**: ChromaDB and Pinecone vector databases for comprehensive IT knowledge
+- **🔍 Semantic Search**: Pinecone vector database for comprehensive IT knowledge
 - **🔊 Voice Responses**: Text-to-speech using HuggingFace TTS models
 - **🧠 Context Memory**: Multi-turn conversation awareness and session management
 - **📦 Batch Processing**: Handle multiple questions in a single message
@@ -38,7 +38,7 @@ Frontend (React/Vite) ←→ Backend (FastAPI) ←→ Advanced AI Components
                                            ├── Conversation Manager (LangChain)
                                            ├── Intelligent Function Agent
                                            ├── Voice Handler (TTS)
-                                           └── ChromaDB (Legacy Support)
+                                           └── Legacy Support (Basic KB)
 ```
 
 ## 🛠️ Tech Stack
@@ -48,7 +48,6 @@ Frontend (React/Vite) ←→ Backend (FastAPI) ←→ Advanced AI Components
 - **Azure OpenAI**: GPT-4o-mini for intelligent responses
 - **Pinecone**: Cloud vector database for fast similarity search
 - **LangChain**: Advanced AI workflow framework with RAG capabilities
-- **ChromaDB**: Vector database for semantic search (fallback)
 - **Sentence Transformers**: Text embeddings for knowledge retrieval
 - **Uvicorn**: ASGI server for FastAPI applications
 - **Pydantic**: Data validation and serialization
@@ -117,9 +116,6 @@ AZOPENAI_EMBEDDING_MODEL=text-embedding-3-large
 # Pinecone Configuration (for advanced AI features)
 PINECONE_API_KEY=your-pinecone-api-key
 PINECONE_INDEX_NAME=it-helpdesk-kb
-
-# ChromaDB Configuration (fallback support)
-CHROMADB_PERSIST_DIR=./chromadb_data
 ```
 
 #### 3. Initialize Advanced AI Features
@@ -210,13 +206,15 @@ it-helpdesk-bot-personal/
 │   ├── main.py               # Main application and chat endpoint
 │   ├── models.py             # Pydantic data models
 │   ├── openai_client.py      # Azure OpenAI client configuration
-│   ├── functions.py          # Tool functions and ChromaDB integration
+│   ├── functions.py          # Tool functions and vector store integration
 │   ├── context_manager.py    # Session and context management
 │   ├── ticket_management.py  # Enhanced ticket system
 │   ├── knowledge_base.py     # Legacy knowledge base
 │   ├── tools/                # Enhanced feature modules
 │   │   ├── __init__.py       # Package initialization
-│   │   ├── faq_handler.py    # ChromaDB knowledge base handler
+│   │   ├── knowledge_handler.py # Unified knowledge base handler
+│   │   ├── pinecone_handler.py  # Pinecone vector store handler
+│   │   ├── langchain_manager.py # LangChain RAG integration
 │   │   └── voice_handler.py  # HuggingFace TTS integration
 │   └── data/                 # Knowledge base data
 │       ├── __init__.py       # Package initialization
@@ -235,8 +233,6 @@ it-helpdesk-bot-personal/
 │   ├── postcss.config.js     # PostCSS configuration
 │   ├── tailwind.config.js    # Tailwind CSS configuration
 │   └── vite.config.js        # Vite build configuration
-├── chromadb_data/            # ChromaDB persistent storage
-│   └── chroma.sqlite3        # ChromaDB database file
 ├── logs/                     # Application logs directory
 ├── requirements.txt          # Python dependencies (enhanced)
 ├── setup_enhanced.sh         # Easy setup script
@@ -247,26 +243,32 @@ it-helpdesk-bot-personal/
 
 ## 🚀 Enhanced Features Guide
 
-### ChromaDB Knowledge Base
-The enhanced bot uses ChromaDB for semantic search across three collections:
+### Pinecone Vector Knowledge Base
+The enhanced bot uses Pinecone vector store for semantic search across organized namespaces:
 
-**FAQs Collection**: Common IT questions and solutions
+**FAQs Namespace**: Common IT questions and solutions
 - Password reset procedures
 - VPN setup instructions
 - Email configuration
 - WiFi troubleshooting
 
-**Software Collection**: Application guides and installation
+**KB Articles Namespace**: Comprehensive software guides and procedures
 - Microsoft Office 365 setup
 - Slack configuration
 - Zoom installation
 - Development tools (Git, VS Code)
 
-**Policies Collection**: IT policies and procedures
+**Policies Namespace**: IT policies and procedures
 - Password policies
 - Software installation rules
 - Data backup requirements
 - Remote work guidelines
+
+**Troubleshooting Namespace**: Advanced diagnostic procedures
+- System diagnostics
+- Network troubleshooting
+- Hardware issue resolution
+- Performance optimization
 
 ### Voice Responses
 The bot can convert text responses to speech using HuggingFace TTS:
@@ -295,7 +297,7 @@ Enhanced session handling provides:
 ## 🔧 API Endpoints
 
 ### Chat Endpoints
-- **POST** `/chat` - Standard chat with ChromaDB knowledge base
+- **POST** `/chat` - Standard chat with Pinecone vector knowledge base
 - **POST** `/chat/enhanced` - Advanced AI chat with vector search and intelligent agents
 
 #### Enhanced Chat Request
