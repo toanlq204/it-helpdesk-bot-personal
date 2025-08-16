@@ -47,6 +47,48 @@ def search_chromadb_knowledge(query: str, collection: str = None) -> str:
         return search_knowledge_base_articles(query, 3)
 
 
+# Workshop 4 Enhanced Functions
+def search_enhanced_vector_store(query: str, namespace: str = None) -> str:
+    """Enhanced vector search using Pinecone (Workshop 4)"""
+    try:
+        from .tools.pinecone_handler import query_pinecone_knowledge
+        result = query_pinecone_knowledge(query, namespace)
+        return result + "\n\n🚀 **Enhanced with Workshop 4 Pinecone Vector Search**"
+    except ImportError:
+        # Fallback to ChromaDB
+        return search_chromadb_knowledge(query)
+    except Exception as e:
+        # Fallback to legacy search
+        return search_knowledge_base_articles(query, 3)
+
+
+def enhanced_rag_response(query: str, session_id: str = "default") -> str:
+    """Enhanced RAG using LangChain (Workshop 4)"""
+    try:
+        from .tools.langchain_manager import enhanced_rag_query
+        result = enhanced_rag_query(query, session_id)
+        return result + "\n\n🔗 **Enhanced with Workshop 4 LangChain RAG**"
+    except ImportError:
+        # Fallback to basic search
+        return search_chromadb_knowledge(query)
+    except Exception as e:
+        # Fallback to legacy search
+        return search_knowledge_base_articles(query, 3)
+
+
+def agent_function_call(query: str, session_id: str = "default") -> str:
+    """Enhanced function calling using agents (Workshop 4)"""
+    try:
+        from .tools.enhanced_function_handler import enhanced_function_call
+        result = enhanced_function_call(query, session_id)
+        return result + "\n\n🤖 **Enhanced with Workshop 4 Agent Function Calling**"
+    except ImportError:
+        # Fallback to regular function calling
+        return "Enhanced function calling not available. Using legacy mode."
+    except Exception as e:
+        return f"Enhanced function calling error: {e}"
+
+
 def search_knowledge_base_articles(query: str, max_results: int = 3) -> str:
     """Search comprehensive knowledge base for relevant IT help articles"""
     results = search_knowledge_base(query, max_results)
@@ -378,6 +420,52 @@ def get_tools_schema() -> List[Dict[str, Any]]:
                 }
             },
         },
+        # Workshop 4 Enhanced Tools
+        {
+            "type": "function",
+            "function": {
+                "name": "search_enhanced_vector_store",
+                "description": "Enhanced vector search using Pinecone for superior knowledge retrieval (Workshop 4)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query for vector database"},
+                        "namespace": {"type": "string", "description": "Specific namespace (faqs, kb_articles, policies, troubleshooting) or leave empty for all"}
+                    },
+                    "required": ["query"]
+                }
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "enhanced_rag_response",
+                "description": "Enhanced RAG response using LangChain for conversational context (Workshop 4)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "User query for RAG processing"},
+                        "session_id": {"type": "string", "description": "Session ID for conversation context"}
+                    },
+                    "required": ["query"]
+                }
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "agent_function_call",
+                "description": "Enhanced function calling using AI agents for complex task execution (Workshop 4)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Complex query for agent processing"},
+                        "session_id": {"type": "string", "description": "Session ID for agent context"}
+                    },
+                    "required": ["query"]
+                }
+            },
+        },
     ]
 
 
@@ -413,6 +501,19 @@ def call_tool_by_name(name: str, arguments_json: str) -> str:
         "search_chromadb_knowledge": lambda: search_chromadb_knowledge(
             args.get("query", ""),
             args.get("collection")
+        ),
+        # Workshop 4 Enhanced Functions
+        "search_enhanced_vector_store": lambda: search_enhanced_vector_store(
+            args.get("query", ""),
+            args.get("namespace")
+        ),
+        "enhanced_rag_response": lambda: enhanced_rag_response(
+            args.get("query", ""),
+            args.get("session_id", "default")
+        ),
+        "agent_function_call": lambda: agent_function_call(
+            args.get("query", ""),
+            args.get("session_id", "default")
         )
     }
 

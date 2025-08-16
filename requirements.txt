@@ -4,7 +4,14 @@ pydantic==2.8.2
 python-dotenv==1.0.1
 openai>=1.51.0
 
-# ChromaDB for knowledge base
+# Workshop 4 Requirements - Vector Stores
+pinecone-client>=3.0.0
+langchain>=0.1.0
+langchain-openai>=0.1.0
+langchain-pinecone>=0.1.0
+langchain-community>=0.1.0
+
+# ChromaDB for knowledge base (fallback)
 chromadb>=0.4.0
 sentence-transformers>=2.2.0
 
@@ -14,3 +21,4 @@ pyttsx3>=2.90  # Optional local TTS fallback
 
 # Additional dependencies
 numpy>=1.24.0
+tiktoken>=0.5.0  # For token counting
