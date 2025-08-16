@@ -1,12 +1,13 @@
 // Import necessary React hooks and components
 import { useEffect, useMemo, useState, useRef } from "react";
 import ChatWindow from "./components/ChatWindow.jsx";
-import { sendMessage, health } from "./api.js";
+import SmartQuickActions from "./components/SmartQuickActions.jsx";
+import { sendMessage, sendEnhancedMessage, health } from "./api.js";
 
 export default function App() {
     // State for managing chat messages
     const [messages, setMessages] = useState([
-        { role: "assistant", content: "Hello! 👋 Welcome to your **Enhanced IT Helpdesk Assistant** - Workshop 4 Edition! \n\n✅ **Fully Implemented Workshop 4 Features:**\n\n🔍 **Vector Store Integration** - Pinecone + LangChain for advanced semantic search\n🛠️ **Interactive Troubleshooting** - Step-by-step guided workflows\n🎫 **Smart Ticket Management** - Auto-categorized with priorities & assignments\n🧠 **Context Memory** - I remember our entire conversation history\n📦 **Batch Processing** - Handle multiple questions in one message\n📊 **System Statistics** - Real-time monitoring & analytics\n🔊 **Voice Response** - Text-to-speech powered by HuggingFace\n🤖 **RAG (Retrieval-Augmented Generation)** - Enhanced responses with knowledge retrieval\n⚡ **Function Calling** - Dynamic tool execution and agent capabilities\n🎯 **Mock Data Integration** - Comprehensive IT knowledge base with real scenarios\n\n💡 **Try these Workshop 4 examples:**\n- \"Search knowledge base for VPN issues and create a ticket\"\n- \"Start Wi-Fi troubleshooting flow\"\n- \"Enhanced RAG query: network troubleshooting\"\n- \"Use function calling to get system statistics\"\n\nHow can I assist you today? 🚀" }
+        { role: "assistant", content: "Hello! 👋 Welcome to your **AI-Powered IT Helpdesk Assistant**! \n\n🚀 **What I can help you with:**\n\n🔍 **Smart Search** - Find solutions instantly from our knowledge base\n⚡ **Automated Actions** - I can execute tasks and create tickets for you\n🤖 **Intelligent Conversations** - I remember our chat and provide contextual help\n🎯 **Multi-Request Handling** - Ask me multiple questions at once\n\n💡 **Try asking me:**\n- \"I can't connect to the office Wi-Fi, help me troubleshoot\"\n- \"Search for VPN setup guides and create a support ticket\"\n- \"Reset my password and show me printer installation steps\"\n- \"What's the status of my recent tickets?\"\n\nHow can I assist you today? 🚀" }
     ]);
     const [input, setInput] = useState("");
     const [serverHealth, setServerHealth] = useState(null);
@@ -14,6 +15,8 @@ export default function App() {
     const [ticketStats, setTicketStats] = useState(null);
     const [audioData, setAudioData] = useState(null);
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+    const [currentView, setCurrentView] = useState('chat'); // 'chat', 'actions'
+    const [useEnhancedMode, setUseEnhancedMode] = useState(true);
 
     // Audio refs for voice playback
     const audioRef = useRef(null);
@@ -33,10 +36,11 @@ export default function App() {
     useEffect(() => {
         (async () => {
             try {
-                const h = await health();
-                setServerHealth(h);
-                setTicketStats(h.tickets_total || 0);
-            } catch {
+                const healthData = await health();
+                setServerHealth(healthData);
+                setTicketStats(healthData.tickets_total || 0);
+            } catch (error) {
+                console.error('Error loading server health:', error);
                 setServerHealth({ status: "offline" });
             }
         })();
@@ -76,7 +80,10 @@ export default function App() {
         setAudioData(null); // Clear previous audio data
 
         try {
-            const res = await sendMessage(sessionId, text);
+            const res = useEnhancedMode
+                ? await sendEnhancedMessage(sessionId, text, { voice: true })
+                : await sendMessage(sessionId, text);
+
             // Server returns full history (user + assistant). We only add the new assistant message:
             setMessages((prev) => [...prev, { role: "assistant", content: res.reply }]);
 
@@ -92,11 +99,24 @@ export default function App() {
         } catch (e) {
             setMessages((prev) => [
                 ...prev,
-                { role: "assistant", content: "Sorry, the server is unavailable right now. Please try again later. 😔" }
+                { role: "assistant", content: `Sorry, I encountered an error: ${e.message}. Please try again or switch to basic mode. 😔` }
             ]);
         } finally {
             setLoading(false);
         }
+    };
+
+    // Handle quick action clicks
+    const handleQuickAction = (query) => {
+        setInput(query);
+        setCurrentView('chat');
+        // Auto-send after a short delay
+        setTimeout(() => {
+            if (!loading) {
+                setInput(query);
+                setTimeout(onSend, 100);
+            }
+        }, 300);
     };
 
     const handleAudioPlay = (playing) => {
@@ -119,7 +139,7 @@ export default function App() {
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse-custom" style={{ animationDelay: '2s' }}></div>
             </div>
 
-            <div className="w-full max-w-4xl flex flex-col gap-6 relative z-10 animate-fadeInUp">
+            <div className="w-full max-w-6xl flex flex-col gap-6 relative z-10 animate-fadeInUp">
                 {/* Header with improved design */}
                 <header className="glass rounded-2xl p-6 shadow-2xl">
                     <div className="flex items-center justify-between">
@@ -130,17 +150,33 @@ export default function App() {
                                 </svg>
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-white">Enhanced IT Helpdesk Assistant</h1>
-                                <p className="text-blue-200 text-sm">Advanced AI support with context memory & smart troubleshooting</p>
+                                <h1 className="text-2xl font-bold text-white">AI IT Helpdesk Assistant</h1>
+                                <p className="text-blue-200 text-sm">Intelligent support with advanced AI capabilities</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
+                            {/* Mode Toggle */}
+                            <div className="flex items-center gap-2">
+                                <span className="text-blue-200 text-sm">Enhanced Mode</span>
+                                <button
+                                    onClick={() => setUseEnhancedMode(!useEnhancedMode)}
+                                    className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${useEnhancedMode ? 'bg-blue-500' : 'bg-gray-600'
+                                        }`}
+                                >
+                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 ${useEnhancedMode ? 'translate-x-7' : 'translate-x-1'
+                                        }`}></div>
+                                </button>
+                            </div>
+
                             {/* Ticket Stats Display */}
                             {ticketStats !== null && (
-                                <div className="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1 rounded-lg text-sm">
-                                    🎫 {ticketStats} tickets
+                                <div className="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+                                    <span>🎫</span>
+                                    <span>{ticketStats} tickets</span>
                                 </div>
                             )}
+
+                            {/* Server Status */}
                             <div className={`flex items-center gap-2 px-4 py-2 rounded-xl shadow-lg transition-all duration-300 ${serverHealth?.status === "ok"
                                 ? "bg-green-500/20 text-green-300 border border-green-500/30"
                                 : "bg-red-500/20 text-red-300 border border-red-500/30"
@@ -148,168 +184,137 @@ export default function App() {
                                 <div className={`w-2 h-2 rounded-full ${serverHealth?.status === "ok" ? "bg-green-400 animate-pulse-custom" : "bg-red-400"
                                     }`}></div>
                                 <span className="text-sm font-medium">
-                                    {serverHealth?.status === "ok" ? "Enhanced Mode" : "Offline"}
+                                    {serverHealth?.status === "ok" ? "Online" : "Offline"}
                                 </span>
                             </div>
                         </div>
                     </div>
                 </header>
 
-                {/* Chat Window with enhanced styling */}
-                <div className="glass-dark rounded-2xl p-2 shadow-2xl" style={{ height: '500px' }}>
-                    <ChatWindow
-                        messages={messages}
-                        loading={loading}
-                        audioData={audioData}
-                        onAudioPlay={handleAudioPlay}
-                    />
-                </div>
-
-                {/* Quick Action Buttons */}
-                <div className="glass rounded-2xl p-4 shadow-2xl">
-                    <h3 className="text-white font-medium mb-3 text-sm">🚀 Quick Actions - Workshop 4 Features</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        <button
-                            onClick={() => setInput("How do I reset my password?")}
-                            className="quick-action-btn"
-                            disabled={loading}
-                        >
-                            <span className="text-lg">🔑</span>
-                            <span className="text-xs">Reset Password</span>
-                        </button>
-                        <button
-                            onClick={() => setInput("Start Wi-Fi troubleshooting")}
-                            className="quick-action-btn"
-                            disabled={loading}
-                        >
-                            <span className="text-lg">📶</span>
-                            <span className="text-xs">Wi-Fi Issues</span>
-                        </button>
-                        <button
-                            onClick={() => setInput("Create a high priority ticket for printer problems")}
-                            className="quick-action-btn"
-                            disabled={loading}
-                        >
-                            <span className="text-lg">🎫</span>
-                            <span className="text-xs">Create Ticket</span>
-                        </button>
-                        <button
-                            onClick={() => setInput("Show me my tickets")}
-                            className="quick-action-btn"
-                            disabled={loading}
-                        >
-                            <span className="text-lg">📋</span>
-                            <span className="text-xs">My Tickets</span>
-                        </button>
-                        <button
-                            onClick={() => setInput("Search knowledge base for VPN setup and network troubleshooting")}
-                            className="quick-action-btn"
-                            disabled={loading}
-                        >
-                            <span className="text-lg">🔍</span>
-                            <span className="text-xs">Vector Search</span>
-                        </button>
-                        <button
-                            onClick={() => setInput("Start printer troubleshooting flow")}
-                            className="quick-action-btn"
-                            disabled={loading}
-                        >
-                            <span className="text-lg">🖨️</span>
-                            <span className="text-xs">Printer Flow</span>
-                        </button>
-                        <button
-                            onClick={() => setInput("Show helpdesk statistics and system status")}
-                            className="quick-action-btn"
-                            disabled={loading}
-                        >
-                            <span className="text-lg">📊</span>
-                            <span className="text-xs">Statistics</span>
-                        </button>
-                        <button
-                            onClick={() => setInput("How to reset password? Also help with VPN setup and create a ticket")}
-                            className="quick-action-btn"
-                            disabled={loading}
-                        >
-                            <span className="text-lg">📦</span>
-                            <span className="text-xs">Multi-Query</span>
-                        </button>
-                        <button
-                            onClick={() => setInput("Enhanced RAG query: comprehensive network troubleshooting with vector search")}
-                            className="quick-action-btn"
-                            disabled={loading}
-                        >
-                            <span className="text-lg">🤖</span>
-                            <span className="text-xs">RAG Query</span>
-                        </button>
-                        <button
-                            onClick={() => setInput("Use agent function calling to search knowledge base and create ticket automatically")}
-                            className="quick-action-btn"
-                            disabled={loading}
-                        >
-                            <span className="text-lg">⚡</span>
-                            <span className="text-xs">Function Call</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Input area with improved design */}
-                <div className="glass rounded-2xl p-4 shadow-2xl">
-                    <div className="flex gap-4">
-                        <div className="flex-1 relative">
-                            <textarea
-                                className={`w-full rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 p-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300 resize-none ${isAudioPlaying ? 'border-blue-400/50' : ''}`}
-                                rows={2}
-                                placeholder="💬 Try: 'How to reset password? Also, start Wi-Fi troubleshooting' or 'Create ticket for broken printer'"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={onKey}
-                                disabled={loading}
+                {/* Main Content Area */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Chat Area - Takes up 2/3 on large screens */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Chat Window */}
+                        <div className="glass-dark rounded-2xl p-2 shadow-2xl" style={{ height: '500px' }}>
+                            <ChatWindow
+                                messages={messages}
+                                loading={loading}
+                                audioData={audioData}
+                                onAudioPlay={handleAudioPlay}
                             />
-                            {input.length > 0 && (
-                                <div className="absolute bottom-2 right-2 text-xs text-blue-300">
-                                    Press Enter to send
-                                </div>
-                            )}
                         </div>
-                        <button
-                            className={`btn-primary rounded-xl px-8 py-4 text-white font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-w-[100px] flex items-center justify-center gap-2 ${loading ? 'animate-pulse' : ''
-                                }`}
-                            onClick={onSend}
-                            disabled={loading || !input.trim()}
-                        >
-                            {loading ? (
-                                <>
-                                    <div className="typing-indicator">
-                                        <div className="typing-dot"></div>
-                                        <div className="typing-dot"></div>
-                                        <div className="typing-dot"></div>
+
+                        {/* Input area */}
+                        <div className="glass rounded-2xl p-4 shadow-2xl">
+                            <div className="flex gap-4">
+                                <div className="flex-1 relative">
+                                    <textarea
+                                        className={`w-full rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 p-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300 resize-none ${isAudioPlaying ? 'border-blue-400/50' : ''}`}
+                                        rows={3}
+                                        placeholder="💬 Ask me anything! Try: 'I can't connect to Wi-Fi and need to create a ticket' or 'Search for printer setup guides'"
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        onKeyDown={onKey}
+                                        disabled={loading}
+                                    />
+                                    {input.length > 0 && (
+                                        <div className="absolute bottom-2 right-2 text-xs text-blue-300">
+                                            Press Enter to send
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    className={`btn-primary rounded-xl px-8 py-4 text-white font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-w-[100px] flex items-center justify-center gap-2 ${loading ? 'animate-pulse' : ''
+                                        }`}
+                                    onClick={onSend}
+                                    disabled={loading || !input.trim()}
+                                >
+                                    {loading ? (
+                                        <>
+                                            <div className="typing-indicator">
+                                                <div className="typing-dot"></div>
+                                                <div className="typing-dot"></div>
+                                                <div className="typing-dot"></div>
+                                            </div>
+                                            <span>Processing</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                            </svg>
+                                            Send
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sidebar - Takes up 1/3 on large screens */}
+                    <div className="space-y-6">
+                        {/* Feature Highlights */}
+                        <div className="glass rounded-2xl p-6 shadow-2xl">
+                            <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+                                <span className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
+                                    <span className="text-white text-sm">✨</span>
+                                </span>
+                                AI Capabilities
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="bg-white/5 rounded-lg p-3 border border-purple-400/20">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-lg">🔍</span>
+                                        <span className="text-white font-medium text-sm">Smart Vector Search</span>
                                     </div>
-                                    <span>Sending</span>
-                                </>
-                            ) : (
-                                <>
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                    </svg>
-                                    Send
-                                </>
-                            )}
-                        </button>
+                                    <p className="text-blue-200 text-xs">Lightning-fast semantic search across knowledge base</p>
+                                </div>
+
+                                <div className="bg-white/5 rounded-lg p-3 border border-yellow-400/20">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-lg">⚡</span>
+                                        <span className="text-white font-medium text-sm">Function Calling</span>
+                                    </div>
+                                    <p className="text-blue-200 text-xs">Dynamic task execution and automated workflows</p>
+                                </div>
+
+                                <div className="bg-white/5 rounded-lg p-3 border border-green-400/20">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-lg">🤖</span>
+                                        <span className="text-white font-medium text-sm">LangChain RAG</span>
+                                    </div>
+                                    <p className="text-blue-200 text-xs">Advanced conversation memory and context understanding</p>
+                                </div>
+
+                                <div className="bg-white/5 rounded-lg p-3 border border-pink-400/20">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-lg">🎯</span>
+                                        <span className="text-white font-medium text-sm">Smart Prompts</span>
+                                    </div>
+                                    <p className="text-blue-200 text-xs">Multi-query processing and intelligent routing</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Smart Quick Actions */}
+                        <SmartQuickActions
+                            onActionClick={handleQuickAction}
+                            loading={loading}
+                        />
                     </div>
                 </div>
 
-                {/* Enhanced footer with tips and audio controls */}
+                {/* Enhanced footer */}
                 <footer className="glass rounded-xl p-4 shadow-lg">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 text-blue-200">
-                            <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                                </svg>
+                            <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                                <span className="text-white text-xs">AI</span>
                             </div>
                             <div>
-                                <p className="text-sm font-medium">✅ Enhanced IT Helpdesk Features:</p>
-                                <p className="text-xs opacity-75">Pinecone Vector Store • LangChain RAG • OpenAI SDK • Context Memory • Smart Troubleshooting</p>
+                                <p className="text-sm font-medium">Powered by Advanced AI Technology</p>
+                                <p className="text-xs opacity-75">Vector Search • Function Calling • LangChain • Context Memory</p>
                             </div>
                         </div>
 
@@ -328,7 +333,7 @@ export default function App() {
                                         <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                                         </svg>
-                                        <span className="text-xs">TTS Loading</span>
+                                        <span className="text-xs">Processing Audio</span>
                                     </div>
                                 )}
                             </div>

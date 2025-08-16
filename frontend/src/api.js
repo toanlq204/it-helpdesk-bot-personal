@@ -19,3 +19,21 @@ export async function health() {
   const res = await fetch(`${API_BASE}/health`);
   return res.json();
 }
+
+// Send enhanced chat message with processing options
+export async function sendEnhancedMessage(sessionId, message, options = {}) {
+  const res = await fetch(`${API_BASE}/chat/enhanced`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ 
+      session_id: sessionId, 
+      message,
+      processing_mode: options.mode || 'auto',
+      include_voice: options.voice || false
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Server error: ${res.status}`);
+  }
+  return res.json();
+}
