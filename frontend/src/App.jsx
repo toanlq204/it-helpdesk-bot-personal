@@ -6,7 +6,7 @@ import { sendMessage, health } from "./api.js";
 export default function App() {
     // State for managing chat messages
     const [messages, setMessages] = useState([
-        { role: "assistant", content: "Hello! 👋 Welcome to your **Enhanced IT Helpdesk Assistant**! \n\n✅ **Verified Working Features:**\n\n🔍 **Knowledge Base Search** - Comprehensive IT help articles\n🛠️ **Interactive Troubleshooting** - Step-by-step guidance\n🎫 **Smart Ticket Management** - Auto-categorized with priorities\n🧠 **Context Memory** - I remember our conversation\n📦 **Batch Processing** - Handle multiple questions at once\n📊 **System Statistics** - Real-time ticket monitoring\n🔊 **Voice Response** - Text-to-speech powered by HuggingFace\n\n💡 **Quick Actions:** Use the buttons below or ask directly!\n\nHow can I help you today?" }
+        { role: "assistant", content: "Hello! 👋 Welcome to your **Enhanced IT Helpdesk Assistant** - Workshop 4 Edition! \n\n✅ **Fully Implemented Workshop 4 Features:**\n\n🔍 **Vector Store Integration** - Pinecone + LangChain for advanced semantic search\n🛠️ **Interactive Troubleshooting** - Step-by-step guided workflows\n🎫 **Smart Ticket Management** - Auto-categorized with priorities & assignments\n🧠 **Context Memory** - I remember our entire conversation history\n📦 **Batch Processing** - Handle multiple questions in one message\n📊 **System Statistics** - Real-time monitoring & analytics\n🔊 **Voice Response** - Text-to-speech powered by HuggingFace\n🤖 **RAG (Retrieval-Augmented Generation)** - Enhanced responses with knowledge retrieval\n⚡ **Function Calling** - Dynamic tool execution and agent capabilities\n🎯 **Mock Data Integration** - Comprehensive IT knowledge base with real scenarios\n\n💡 **Try these Workshop 4 examples:**\n- \"Search knowledge base for VPN issues and create a ticket\"\n- \"Start Wi-Fi troubleshooting flow\"\n- \"Enhanced RAG query: network troubleshooting\"\n- \"Use function calling to get system statistics\"\n\nHow can I assist you today? 🚀" }
     ]);
     const [input, setInput] = useState("");
     const [serverHealth, setServerHealth] = useState(null);
@@ -167,8 +167,8 @@ export default function App() {
 
                 {/* Quick Action Buttons */}
                 <div className="glass rounded-2xl p-4 shadow-2xl">
-                    <h3 className="text-white font-medium mb-3 text-sm">🚀 Quick Actions</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <h3 className="text-white font-medium mb-3 text-sm">🚀 Quick Actions - Workshop 4 Features</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                         <button
                             onClick={() => setInput("How do I reset my password?")}
                             className="quick-action-btn"
@@ -186,7 +186,7 @@ export default function App() {
                             <span className="text-xs">Wi-Fi Issues</span>
                         </button>
                         <button
-                            onClick={() => setInput("Create a ticket for printer problems")}
+                            onClick={() => setInput("Create a high priority ticket for printer problems")}
                             className="quick-action-btn"
                             disabled={loading}
                         >
@@ -202,23 +202,23 @@ export default function App() {
                             <span className="text-xs">My Tickets</span>
                         </button>
                         <button
-                            onClick={() => setInput("Search knowledge base for VPN setup")}
+                            onClick={() => setInput("Search knowledge base for VPN setup and network troubleshooting")}
                             className="quick-action-btn"
                             disabled={loading}
                         >
                             <span className="text-lg">🔍</span>
-                            <span className="text-xs">Search KB</span>
+                            <span className="text-xs">Vector Search</span>
                         </button>
                         <button
-                            onClick={() => setInput("Start printer troubleshooting")}
+                            onClick={() => setInput("Start printer troubleshooting flow")}
                             className="quick-action-btn"
                             disabled={loading}
                         >
                             <span className="text-lg">🖨️</span>
-                            <span className="text-xs">Printer Help</span>
+                            <span className="text-xs">Printer Flow</span>
                         </button>
                         <button
-                            onClick={() => setInput("Show helpdesk statistics")}
+                            onClick={() => setInput("Show helpdesk statistics and system status")}
                             className="quick-action-btn"
                             disabled={loading}
                         >
@@ -226,12 +226,28 @@ export default function App() {
                             <span className="text-xs">Statistics</span>
                         </button>
                         <button
-                            onClick={() => setInput("How to reset password? Also help with VPN setup")}
+                            onClick={() => setInput("How to reset password? Also help with VPN setup and create a ticket")}
                             className="quick-action-btn"
                             disabled={loading}
                         >
                             <span className="text-lg">📦</span>
                             <span className="text-xs">Multi-Query</span>
+                        </button>
+                        <button
+                            onClick={() => setInput("Enhanced RAG query: comprehensive network troubleshooting with vector search")}
+                            className="quick-action-btn"
+                            disabled={loading}
+                        >
+                            <span className="text-lg">🤖</span>
+                            <span className="text-xs">RAG Query</span>
+                        </button>
+                        <button
+                            onClick={() => setInput("Use agent function calling to search knowledge base and create ticket automatically")}
+                            className="quick-action-btn"
+                            disabled={loading}
+                        >
+                            <span className="text-lg">⚡</span>
+                            <span className="text-xs">Function Call</span>
                         </button>
                     </div>
                 </div>
@@ -293,7 +309,7 @@ export default function App() {
                             </div>
                             <div>
                                 <p className="text-sm font-medium">✅ Enhanced IT Helpdesk Features:</p>
-                                <p className="text-xs opacity-75">ChromaDB Knowledge Base • OpenAI SDK • HuggingFace TTS • Context Memory • Smart Troubleshooting</p>
+                                <p className="text-xs opacity-75">Pinecone Vector Store • LangChain RAG • OpenAI SDK • Context Memory • Smart Troubleshooting</p>
                             </div>
                         </div>
 

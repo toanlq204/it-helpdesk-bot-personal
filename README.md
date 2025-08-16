@@ -1,45 +1,68 @@
-# IT Helpdesk Bot - Enhanced Personal Assistant v2.0
+# Advanced IT Helpdesk Bot - AI-Powered Assistant v3.0
 
-A full-stack AI-powered IT helpdesk chatbot with advanced features including ChromaDB knowledge base, voice responses, and enhanced session management. Built with FastAPI backend and React frontend, powered by Azure OpenAI.
+A sophisticated full-stack AI-powered IT helpdesk chatbot with cutting-edge features including vector database search, advanced conversational AI, intelligent function calling, and comprehensive knowledge management. Built with FastAPI backend and React frontend, powered by Azure OpenAI and advanced AI frameworks.
 
-## 🌟 Enhanced Features
+## 🌟 Advanced AI Features
 
-### Core Capabilities
-- **🤖 AI-Powered Chat Assistant**: Intelligent responses using Azure OpenAI's GPT-4o-mini
-- **� ChromaDB Knowledge Base**: Comprehensive IT knowledge search across FAQs, software guides, and policies
+### Core AI Capabilities
+- **🤖 Intelligent Chat Assistant**: Advanced responses using Azure OpenAI's GPT-4o-mini
+- **🧠 Vector Database Search**: Lightning-fast semantic search with Pinecone vector store
+- **💬 Advanced Conversational AI**: LangChain-powered RAG workflows with memory
+- **🛠️ Intelligent Function Calling**: AI agents for dynamic capability selection
+- **📊 Multi-Modal Integration**: Seamless combination of all AI features
+
+### Enhanced Knowledge Management
+- **🔍 Semantic Search**: Pinecone vector database for comprehensive IT knowledge
 - **🔊 Voice Responses**: Text-to-speech using HuggingFace TTS models
 - **🧠 Context Memory**: Multi-turn conversation awareness and session management
 - **📦 Batch Processing**: Handle multiple questions in a single message
 
-### Advanced Features
-- **� Smart FAQ System**: Enhanced FAQ database with semantic search
+### Smart IT Support Features
+- **❓ Smart FAQ System**: Enhanced FAQ database with semantic search
 - **🎫 Auto-Categorized Tickets**: Intelligent ticket creation with priority assignment
-- **�️ Interactive Troubleshooting**: Step-by-step guided troubleshooting flows
+- **🛠️ Interactive Troubleshooting**: Step-by-step guided troubleshooting flows
 - **📊 Real-time Statistics**: Live ticket and system statistics
 - **📱 Responsive Design**: Modern UI with audio playback controls
 
 ### Knowledge Base Collections
 - **❓ FAQs**: Password resets, VPN setup, email issues, WiFi troubleshooting
-- **� Software Guides**: Office 365, Slack, Zoom, Git, Adobe Creative Suite
+- **📖 Software Guides**: Office 365, Slack, Zoom, Git, Adobe Creative Suite
 - **📋 IT Policies**: Security policies, data backup, remote work guidelines
+- **🔧 Troubleshooting**: Hardware diagnostics, software issues, network problems
+
+## 🏗️ Architecture Overview
+
+```
+Frontend (React/Vite) ←→ Backend (FastAPI) ←→ Advanced AI Components
+                                           ├── Vector Store Manager (Pinecone)
+                                           ├── Conversation Manager (LangChain)
+                                           ├── Intelligent Function Agent
+                                           ├── Voice Handler (TTS)
+                                           └── Legacy Support (Basic KB)
+```
 
 ## 🛠️ Tech Stack
 
-### Backend
+### Backend (Python)
 - **FastAPI**: High-performance Python web framework
 - **Azure OpenAI**: GPT-4o-mini for intelligent responses
-- **ChromaDB**: Vector database for semantic search
+- **Pinecone**: Cloud vector database for fast similarity search
+- **LangChain**: Advanced AI workflow framework with RAG capabilities
 - **Sentence Transformers**: Text embeddings for knowledge retrieval
 - **Uvicorn**: ASGI server for FastAPI applications
 - **Pydantic**: Data validation and serialization
-- **Python-dotenv**: Environment variable management
 
-### Frontend
+### Frontend (JavaScript)
 - **React 18**: Modern React with hooks
 - **Vite**: Fast development build tool  
 - **Tailwind CSS**: Utility-first CSS framework
 - **Audio API**: Browser audio playback for voice responses
-- **@vitejs/plugin-react**: Official React plugin for Vite
+
+### AI & ML Libraries
+- **LangChain**: Conversational AI and RAG workflows
+- **Pinecone**: Vector database integration
+- **OpenAI Functions**: Advanced function calling capabilities
+- **HuggingFace**: Text-to-speech and transformer models
 
 ## 🚀 Quick Start
 
@@ -47,13 +70,14 @@ A full-stack AI-powered IT helpdesk chatbot with advanced features including Chr
 - Python 3.8+
 - Node.js 16+
 - Azure OpenAI API access
+- Pinecone API key (for vector search)
 - VS Code (recommended for development)
 
-### Easy Setup Script
+### Automated Setup (Recommended)
 ```bash
 git clone https://github.com/toanlq204/it-helpdesk-bot-personal.git
 cd it-helpdesk-bot-personal
-git checkout feature/updateitbot_workshop3  # Switch to the enhanced features branch
+chmod +x setup_enhanced.sh
 ./setup_enhanced.sh
 ```
 
@@ -72,55 +96,65 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-#### Environment Configuration
+#### 2. Environment Configuration
 ```bash
 cp env.template .env
 ```
 
-Edit `.env` file with your Azure OpenAI credentials:
+Edit `.env` file with your API credentials:
 ```env
 # Azure OpenAI Configuration
 AZURE_OPENAI_API_KEY=your-azure-openai-api-key
 AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
 AZURE_OPENAI_API_VERSION=2024-07-01-preview
-MODEL_NAME=gpt-4o-mini
+AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
 
 # Azure OpenAI Embedding Configuration
 AZOPENAI_EMBEDDING_API_KEY=your-azure-openai-api-key
-AZOPENAI_EMBEDDING_MODEL=text-embedding-3-small
+AZOPENAI_EMBEDDING_MODEL=text-embedding-3-large
 
-# ChromaDB Configuration (Optional)
-CHROMADB_PERSIST_DIR=./chromadb_data
+# Pinecone Configuration (for advanced AI features)
+PINECONE_API_KEY=your-pinecone-api-key
+PINECONE_INDEX_NAME=it-helpdesk-kb
 ```
 
-### 3. Frontend Setup
+#### 3. Initialize Advanced AI Features
+```bash
+# Initialize vector database and AI components
+python -c "
+from backend.tools.pinecone_handler import get_vector_store_manager
+from backend.tools.langchain_manager import get_conversation_manager
+print('Initializing advanced AI features...')
+manager = get_vector_store_manager()
+conversation = get_conversation_manager()
+print('Advanced AI features initialized successfully!')
+"
+```
+
+#### 4. Frontend Setup
 ```bash
 cd frontend
 npm install
 ```
 
-### 4. Run the Application
+#### 5. Run the Application
 
-#### Option 1: Using VS Code Tasks (Recommended)
+##### Option 1: Using VS Code Tasks (Recommended)
 This project includes VS Code tasks for easy development. In VS Code:
 1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
 2. Type "Tasks: Run Task"
 3. Select "Run Backend (FastAPI)" and "Run Frontend (React/Vite)"
 
-Or use the terminal commands below:
+##### Option 2: Manual Terminal Commands
 
-#### Option 2: Manual Terminal Commands
-
-#### Start Backend (Terminal 1)
+Start Backend (Terminal 1):
 ```bash
 # From project root
 source .venv/bin/activate  # Activate virtual environment
 uvicorn backend.main:app --reload --port 8000
 ```
 
-**Note**: The VS Code task uses the full path to the virtual environment Python interpreter, so it doesn't require manual activation.
-
-#### Start Frontend (Terminal 2)
+Start Frontend (Terminal 2):
 ```bash
 # From project root
 cd frontend
@@ -131,6 +165,7 @@ The application will be available at:
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
+- **System Status**: http://localhost:8000/system/status
 
 ## � Development
 
@@ -171,13 +206,15 @@ it-helpdesk-bot-personal/
 │   ├── main.py               # Main application and chat endpoint
 │   ├── models.py             # Pydantic data models
 │   ├── openai_client.py      # Azure OpenAI client configuration
-│   ├── functions.py          # Tool functions and ChromaDB integration
+│   ├── functions.py          # Tool functions and vector store integration
 │   ├── context_manager.py    # Session and context management
 │   ├── ticket_management.py  # Enhanced ticket system
 │   ├── knowledge_base.py     # Legacy knowledge base
 │   ├── tools/                # Enhanced feature modules
 │   │   ├── __init__.py       # Package initialization
-│   │   ├── faq_handler.py    # ChromaDB knowledge base handler
+│   │   ├── knowledge_handler.py # Unified knowledge base handler
+│   │   ├── pinecone_handler.py  # Pinecone vector store handler
+│   │   ├── langchain_manager.py # LangChain RAG integration
 │   │   └── voice_handler.py  # HuggingFace TTS integration
 │   └── data/                 # Knowledge base data
 │       ├── __init__.py       # Package initialization
@@ -196,8 +233,6 @@ it-helpdesk-bot-personal/
 │   ├── postcss.config.js     # PostCSS configuration
 │   ├── tailwind.config.js    # Tailwind CSS configuration
 │   └── vite.config.js        # Vite build configuration
-├── chromadb_data/            # ChromaDB persistent storage
-│   └── chroma.sqlite3        # ChromaDB database file
 ├── logs/                     # Application logs directory
 ├── requirements.txt          # Python dependencies (enhanced)
 ├── setup_enhanced.sh         # Easy setup script
@@ -208,26 +243,32 @@ it-helpdesk-bot-personal/
 
 ## 🚀 Enhanced Features Guide
 
-### ChromaDB Knowledge Base
-The enhanced bot uses ChromaDB for semantic search across three collections:
+### Pinecone Vector Knowledge Base
+The enhanced bot uses Pinecone vector store for semantic search across organized namespaces:
 
-**FAQs Collection**: Common IT questions and solutions
+**FAQs Namespace**: Common IT questions and solutions
 - Password reset procedures
 - VPN setup instructions
 - Email configuration
 - WiFi troubleshooting
 
-**Software Collection**: Application guides and installation
+**KB Articles Namespace**: Comprehensive software guides and procedures
 - Microsoft Office 365 setup
 - Slack configuration
 - Zoom installation
 - Development tools (Git, VS Code)
 
-**Policies Collection**: IT policies and procedures
+**Policies Namespace**: IT policies and procedures
 - Password policies
 - Software installation rules
 - Data backup requirements
 - Remote work guidelines
+
+**Troubleshooting Namespace**: Advanced diagnostic procedures
+- System diagnostics
+- Network troubleshooting
+- Hardware issue resolution
+- Performance optimization
 
 ### Voice Responses
 The bot can convert text responses to speech using HuggingFace TTS:
@@ -255,41 +296,79 @@ Enhanced session handling provides:
 
 ## 🔧 API Endpoints
 
-### Chat Endpoint
-- **POST** `/chat` - Send message and get AI response
-  ```json
-  {
-    "message": "How do I reset my password?",
-    "session_id": "unique-session-id"
-  }
-  ```
+### Chat Endpoints
+- **POST** `/chat` - Standard chat with Pinecone vector knowledge base
+- **POST** `/chat/enhanced` - Advanced AI chat with vector search and intelligent agents
 
-### Health Check
+#### Enhanced Chat Request
+```json
+{
+  "message": "How do I reset my password and set up VPN?",
+  "session_id": "user123",
+  "include_audio": true
+}
+```
+
+#### Enhanced Chat Response
+```json
+{
+  "reply": "AI response with advanced features",
+  "messages": [...],
+  "session_id": "user123",
+  "processing_mode": "auto",
+  "features_used": ["advanced_conversation_ai", "vector_database_search"],
+  "fallback_used": false
+}
+```
+
+### System Management Endpoints
+- **GET** `/system/status` - Check AI system availability and component status
+- **GET** `/system/demo` - Run system demonstration of all features
+- **GET** `/system/report` - Generate detailed system capability report
+- **POST** `/system/initialize` - Initialize advanced AI features
+
+### Traditional Endpoints
 - **GET** `/health` - Check server status and open tickets count
+- **GET** `/tickets/stats` - Get ticket statistics
+- **POST** `/tickets` - Create new support ticket
 
-## 🤖 Available AI Tools
+## 🤖 Available AI Tools & Capabilities
 
-The bot has access to several specialized functions:
+The advanced AI system includes specialized tools and capabilities:
 
-1. **FAQ Lookup** (`get_faq_answer`)
-   - Searches knowledge base for common IT questions
-   - Provides instant answers for password resets, email setup, etc.
+### Intelligent Function Agent Tools
+1. **Knowledge Base Search** - Semantic search across all IT documentation
+2. **Ticket Management** - Create, update, and track support tickets
+3. **Software Information** - Provide software versions and installation guidance
+4. **Troubleshooting Flows** - Step-by-step problem resolution
+5. **Policy Lookup** - Access IT policies and procedures
+6. **Voice Synthesis** - Convert responses to speech
 
-2. **Ticket Creation** (`create_ticket`)
-   - Creates support tickets for complex issues
-   - Assigns unique ticket IDs
-   - Tracks ticket status
+### Vector Database Features
+- **Multi-namespace Search**: FAQs, policies, software guides, troubleshooting
+- **Semantic Similarity**: Advanced embedding-based search
+- **Relevance Scoring**: Intelligent result ranking
+- **Real-time Updates**: Dynamic knowledge base updates
 
-3. **Software Information** (`get_software_info`)
-   - Provides software versions and download links
-   - Helps with installation guidance
+### Conversational AI Features
+- **Memory Management**: Context-aware multi-turn conversations
+- **Session Persistence**: Maintain conversation state across interactions
+- **Intelligent Routing**: Automatic feature selection based on query type
+- **Fallback Support**: Graceful degradation to basic features
 
-## 💡 Usage Examples
+## 💡 Advanced Usage Examples
 
-**Password Reset:**
-> "I forgot my password, can you help me reset it?"
+**Vector Search:**
+> "Search knowledge base for VPN setup procedures"
 
-**Software Installation:**
+**Intelligent Conversation:**
+> "I'm having trouble with my laptop screen flickering, can you help troubleshoot this step by step?"
+
+**Function Calling:**
+> "Create a high-priority ticket for broken printer in conference room"
+
+**Multi-modal Query:**
+> "How do I reset my password and also set up two-factor authentication?"
 > "How do I install Microsoft Office?"
 
 **Multiple Questions:**

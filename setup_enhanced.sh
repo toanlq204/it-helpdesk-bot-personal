@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# IT Helpdesk Bot - Enhanced Features Installation Script
-# This script installs the new dependencies and sets up the enhanced features
+# Advanced IT Helpdesk Bot - Complete Setup Script
+# This script installs all dependencies and sets up the advanced AI features
 
-echo "🤖 Setting up Enhanced IT Helpdesk Bot..."
+echo "🤖 Setting up Advanced IT Helpdesk Bot with AI Features..."
 
 # Check if Python virtual environment exists
 if [ ! -d ".venv" ]; then
@@ -44,10 +44,23 @@ if [ ! -f ".env" ]; then
     echo "⚠️  Please edit .env file with your actual API keys and configuration"
 fi
 
-echo "✅ Enhanced IT Helpdesk Bot setup complete!"
+# Initialize advanced AI features
+echo "🧠 Initializing advanced AI features..."
+echo "Testing vector store and conversation managers..."
+python3 -c "
+try:
+    from backend.tools.pinecone_handler import get_vector_store_manager
+    from backend.tools.langchain_manager import get_conversation_manager
+    from backend.tools.enhanced_function_handler import get_intelligent_function_agent
+    print('✅ Advanced AI components loaded successfully')
+except Exception as e:
+    print(f'⚠️  Advanced AI features available but may need configuration: {e}')
+"
+
+echo "✅ Advanced IT Helpdesk Bot setup complete!"
 echo ""
 echo "🚀 Next steps:"
-echo "1. Edit .env file with your Azure OpenAI and HuggingFace API keys"
+echo "1. Edit .env file with your Azure OpenAI, Pinecone, and other API keys"
 echo "2. Run the backend: .venv/bin/uvicorn backend.main:app --reload --port 8000"
 echo "3. Run the frontend: cd frontend && npm run dev"
 echo ""
