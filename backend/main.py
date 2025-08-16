@@ -141,7 +141,20 @@ def get_session_messages(session_id: str) -> List[Dict[str, str]]:
         # Initialize with enhanced system prompt
         session["messages"] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    return session["messages"]
+    # Clean the messages to remove any tool-related messages that might cause issues
+    cleaned_messages = []
+    for msg in session["messages"]:
+        # Only keep user, assistant, and system messages for OpenAI API
+        if msg.get("role") in ["user", "assistant", "system"]:
+            cleaned_msg = {
+                "role": msg["role"],
+                "content": msg.get("content", "")
+            }
+            # Only add non-empty messages
+            if cleaned_msg["content"].strip():
+                cleaned_messages.append(cleaned_msg)
+
+    return cleaned_messages
 
 
 def enhanced_split_into_subqueries(user_text: str, session_id: str) -> List[str]:
@@ -262,6 +275,9 @@ def chat(req: ChatRequest):
 
         # Enhanced tool calling loop with better context management
         tool_turns = 0
+        final_response = ""
+        tool_results_accumulated = []
+
         while tool_turns < MAX_TOOL_TURNS:
             completion = client.chat.completions.create(
                 model=MODEL_NAME,
@@ -273,26 +289,9 @@ def chat(req: ChatRequest):
             msg = completion.choices[0].message
 
             if msg.tool_calls:
-                # Convert tool calls to dict format for messages
-                tool_calls_dict = [
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments
-                        }
-                    }
-                    for tc in msg.tool_calls
-                ]
+                # Process tool calls and accumulate results
+                tool_results = []
 
-                messages.append({
-                    "role": "assistant",
-                    "content": msg.content or "",
-                    "tool_calls": tool_calls_dict
-                })
-
-                # Process each tool call and update context
                 for tool_call in msg.tool_calls:
                     name = tool_call.function.name
                     arguments = tool_call.function.arguments
@@ -301,22 +300,39 @@ def chat(req: ChatRequest):
                     # Update conversation context based on tool usage
                     update_context_for_tool_call(
                         name, arguments, result, req.session_id)
+                    tool_results.append(result)
 
-                    # Add function result to messages
+                # Accumulate all tool results
+                tool_results_accumulated.extend(tool_results)
+
+                # Create a summary of tool results for the next iteration
+                if tool_results:
+                    tool_summary = "\n\n".join(tool_results)
+                    # Add the tool results as a system message to guide the next response
                     messages.append({
-                        "role": "tool",
-                        "content": result,
-                        "tool_call_id": tool_call.id
+                        "role": "user",
+                        "content": f"Based on the tool results: {tool_summary}\n\nPlease provide a helpful response to the user."
                     })
 
                 tool_turns += 1
                 continue
             else:
                 # No more tool calls → this is the final answer
-                assistant_text = msg.content or "I'm here to help with your IT needs."
+                final_response = msg.content or "I'm here to help with your IT needs."
                 messages.append(
-                    {"role": "assistant", "content": assistant_text})
+                    {"role": "assistant", "content": final_response})
                 break
+
+        # If we have tool results but no final response, create one from the tool results
+        if not final_response and tool_results_accumulated:
+            final_response = "\n\n".join(tool_results_accumulated)
+            messages.append({"role": "assistant", "content": final_response})
+        elif not final_response:
+            final_response = "I'm here to help with your IT needs."
+            messages.append({"role": "assistant", "content": final_response})
+
+        # Store cleaned messages back to session (only user, assistant, system)
+        session["messages"] = messages
 
         # Trim message history if needed
         trim_message_history(messages, session)
@@ -334,17 +350,24 @@ def chat(req: ChatRequest):
         # Get updated ticket statistics for frontend
         ticket_stats = get_ticket_statistics()
 
-        # Generate voice response if available
+        # Generate voice response if available and working
         audio_response = None
-        if ENHANCED_FEATURES_AVAILABLE and history_for_client:
+        if ENHANCED_FEATURES_AVAILABLE and final_response:
             try:
-                assistant_reply = history_for_client[-1].content
-                audio_response = generate_voice_response(assistant_reply)
+                # Generate voice for the final assistant response
+                audio_response = generate_voice_response(final_response)
+                if audio_response and audio_response.get("success"):
+                    print(
+                        f"✅ TTS generated successfully using {audio_response.get('model_used', 'unknown model')}")
+                else:
+                    print(
+                        f"⚠️ TTS generation failed: {audio_response.get('message', 'Unknown error') if audio_response else 'No response'}")
             except Exception as e:
-                print(f"TTS generation failed: {e}")
+                print(f"❌ TTS generation error: {e}")
+                audio_response = None
 
         return ChatResponse(
-            reply=history_for_client[-1].content if history_for_client else "",
+            reply=final_response,
             messages=history_for_client,
             tickets=[],  # Empty list for backward compatibility
             stats=ticket_stats,
@@ -385,8 +408,8 @@ def health():
 
         if ENHANCED_FEATURES_AVAILABLE:
             features.extend([
-                "ChromaDB Knowledge Base",
-                "Voice Response (TTS)"
+                "ChromaDB Knowledge Base"
+                # "Voice Response (TTS)"  # Temporarily disabled
             ])
 
         return {

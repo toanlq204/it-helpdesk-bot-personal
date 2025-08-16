@@ -3,8 +3,12 @@ import chromadb
 from chromadb.config import Settings
 from typing import List, Dict, Any
 import os
-from sentence_transformers import SentenceTransformer
+import requests
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -17,31 +21,66 @@ class ITKnowledgeBase:
         self.persist_directory = persist_directory
         self.client = chromadb.PersistentClient(path=persist_directory)
 
-        # Initialize sentence transformer for embeddings
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        # Configuration for HuggingFace embedding
+        self.hf_token = os.getenv("AZOPENAI_EMBEDDING_API_KEY")
+        self.embedding_model = os.getenv(
+            "AZOPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
-        # Initialize collections
-        self.collections = {
-            "faqs": self._get_or_create_collection("it_faqs"),
-            "software": self._get_or_create_collection("software_guides"),
-            "policies": self._get_or_create_collection("it_policies")
-        }
+        if not self.hf_token:
+            logger.warning(
+                "AZOPENAI_EMBEDDING_API_KEY not found. Using default embeddings.")
+
+        # Initialize collections with proper embedding function
+        self.collections = {}
+        self._initialize_collections()
 
         logger.info("ITKnowledgeBase initialized successfully")
 
-    def _get_or_create_collection(self, name: str):
-        """Get or create a ChromaDB collection"""
-        try:
-            return self.client.get_collection(name)
-        except ValueError:
-            return self.client.create_collection(name)
+    def _get_embedding_function(self):
+        """Get embedding function for ChromaDB"""
+        if self.hf_token:
+            # Use HuggingFace embedding
+            return chromadb.utils.embedding_functions.HuggingFaceEmbeddingFunction(
+                api_key=self.hf_token,
+                model_name="sentence-transformers/all-MiniLM-L6-v2"
+            )
+        else:
+            # Use default embedding
+            return chromadb.utils.embedding_functions.DefaultEmbeddingFunction()
+
+    def _initialize_collections(self):
+        """Initialize all required collections"""
+        embedding_function = self._get_embedding_function()
+
+        collection_names = ["it_faqs", "software_guides", "it_policies"]
+
+        for name in collection_names:
+            try:
+                # Try to get existing collection
+                collection = self.client.get_collection(
+                    name=name,
+                    embedding_function=embedding_function
+                )
+                logger.info(f"Found existing collection: {name}")
+            except ValueError:
+                # Create new collection if it doesn't exist
+                collection = self.client.create_collection(
+                    name=name,
+                    embedding_function=embedding_function
+                )
+                logger.info(f"Created new collection: {name}")
+
+            self.collections[name.replace("it_", "")] = collection
 
     def add_knowledge(self, collection_name: str, documents: List[Dict[str, Any]]):
         """Add documents to a specific collection"""
-        if collection_name not in self.collections:
-            raise ValueError(f"Collection {collection_name} not found")
+        # Map collection names
+        collection_key = collection_name.replace("it_", "")
+        if collection_key not in self.collections:
+            logger.error(f"Collection {collection_name} not found")
+            return
 
-        collection = self.collections[collection_name]
+        collection = self.collections[collection_key]
 
         # Prepare data for ChromaDB
         ids = []
@@ -50,22 +89,39 @@ class ITKnowledgeBase:
 
         for i, doc in enumerate(documents):
             doc_id = doc.get('id', f"{collection_name}_{i}")
-            text = doc.get('content', '')
+
+            # Create comprehensive text for embedding
+            title = doc.get('title', '')
+            content = doc.get('content', '')
+            question = doc.get('question', '')
+            answer = doc.get('answer', '')
+
+            text = f"{title} {question} {answer} {content}".strip()
+
+            if not text:
+                continue
+
             metadata = {k: v for k, v in doc.items() if k not in [
                 'id', 'content']}
+            metadata['source'] = collection_name
 
             ids.append(doc_id)
             texts.append(text)
             metadatas.append(metadata)
 
-        # Add to collection
-        collection.add(
-            documents=texts,
-            metadatas=metadatas,
-            ids=ids
-        )
-
-        logger.info(f"Added {len(documents)} documents to {collection_name}")
+        if texts:
+            # Add to collection
+            try:
+                collection.add(
+                    documents=texts,
+                    metadatas=metadatas,
+                    ids=ids
+                )
+                logger.info(
+                    f"Added {len(texts)} documents to {collection_name}")
+            except Exception as e:
+                logger.error(
+                    f"Error adding documents to {collection_name}: {e}")
 
     def query_knowledge(self, query: str, collection_name: str = None, n_results: int = 3) -> List[Dict[str, Any]]:
         """Query knowledge base for relevant information"""
@@ -102,7 +158,6 @@ class ITKnowledgeBase:
 
         # Sort by relevance score
         results.sort(key=lambda x: x['relevance_score'], reverse=True)
-
         return results[:n_results * len(collections_to_query)]
 
     def get_contextual_knowledge(self, query: str, session_id: str) -> str:

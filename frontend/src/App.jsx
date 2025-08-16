@@ -1,12 +1,12 @@
 // Import necessary React hooks and components
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import ChatWindow from "./components/ChatWindow.jsx";
 import { sendMessage, health } from "./api.js";
 
 export default function App() {
     // State for managing chat messages
     const [messages, setMessages] = useState([
-        { role: "assistant", content: "Hello there! 👋 Welcome to your **Enhanced IT Helpdesk Assistant**! \n\n🚀 **New Advanced Features:**\n\n🔍 **Smart Knowledge Base Search** - Get detailed troubleshooting guides\n🛠️ **Interactive Troubleshooting** - Step-by-step guidance for Wi-Fi, printers, and email\n🎫 **Enhanced Ticket Management** - Auto-categorized tickets with priority levels\n🧠 **Context Memory** - I remember our conversation and handle follow-ups\n📦 **Batch Processing** - Ask multiple questions at once!\n🔊 **Voice Responses** - Hear answers with text-to-speech\n\n� **Try asking:**\n• \"How to fix slow Wi-Fi? Also, how do I reset my password?\"\n• \"Start troubleshooting my printer issues\"\n• \"Search knowledge base for VPN problems\"\n• \"Create a ticket for my broken laptop screen\"\n• \"Show me all my tickets\"\n\nHow can I help you today?" }
+        { role: "assistant", content: "Hello! 👋 Welcome to your **Enhanced IT Helpdesk Assistant**! \n\n✅ **Verified Working Features:**\n\n🔍 **Knowledge Base Search** - Comprehensive IT help articles\n🛠️ **Interactive Troubleshooting** - Step-by-step guidance\n🎫 **Smart Ticket Management** - Auto-categorized with priorities\n🧠 **Context Memory** - I remember our conversation\n📦 **Batch Processing** - Handle multiple questions at once\n📊 **System Statistics** - Real-time ticket monitoring\n🔊 **Voice Response** - Text-to-speech powered by HuggingFace\n\n💡 **Quick Actions:** Use the buttons below or ask directly!\n\nHow can I help you today?" }
     ]);
     const [input, setInput] = useState("");
     const [serverHealth, setServerHealth] = useState(null);
@@ -14,6 +14,9 @@ export default function App() {
     const [ticketStats, setTicketStats] = useState(null);
     const [audioData, setAudioData] = useState(null);
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+
+    // Audio refs for voice playback
+    const audioRef = useRef(null);
 
     // Generate or retrieve session ID from localStorage
     const sessionId = useMemo(() => {
@@ -38,6 +41,30 @@ export default function App() {
             }
         })();
     }, []);
+
+    // Audio playback effect
+    useEffect(() => {
+        if (audioData && audioData.audio_data && audioData.success) {
+            try {
+                // Create audio blob from base64 data
+                const audioBytes = atob(audioData.audio_data);
+                const audioArray = new Uint8Array(audioBytes.length);
+                for (let i = 0; i < audioBytes.length; i++) {
+                    audioArray[i] = audioBytes.charCodeAt(i);
+                }
+
+                const audioBlob = new Blob([audioArray], { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+
+                if (audioRef.current) {
+                    audioRef.current.src = audioUrl;
+                    audioRef.current.play();
+                }
+            } catch (error) {
+                console.error('Error playing audio:', error);
+            }
+        }
+    }, [audioData]);
 
     // Handle sending a message
     const onSend = async () => {
@@ -138,6 +165,77 @@ export default function App() {
                     />
                 </div>
 
+                {/* Quick Action Buttons */}
+                <div className="glass rounded-2xl p-4 shadow-2xl">
+                    <h3 className="text-white font-medium mb-3 text-sm">🚀 Quick Actions</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <button
+                            onClick={() => setInput("How do I reset my password?")}
+                            className="quick-action-btn"
+                            disabled={loading}
+                        >
+                            <span className="text-lg">🔑</span>
+                            <span className="text-xs">Reset Password</span>
+                        </button>
+                        <button
+                            onClick={() => setInput("Start Wi-Fi troubleshooting")}
+                            className="quick-action-btn"
+                            disabled={loading}
+                        >
+                            <span className="text-lg">📶</span>
+                            <span className="text-xs">Wi-Fi Issues</span>
+                        </button>
+                        <button
+                            onClick={() => setInput("Create a ticket for printer problems")}
+                            className="quick-action-btn"
+                            disabled={loading}
+                        >
+                            <span className="text-lg">🎫</span>
+                            <span className="text-xs">Create Ticket</span>
+                        </button>
+                        <button
+                            onClick={() => setInput("Show me my tickets")}
+                            className="quick-action-btn"
+                            disabled={loading}
+                        >
+                            <span className="text-lg">📋</span>
+                            <span className="text-xs">My Tickets</span>
+                        </button>
+                        <button
+                            onClick={() => setInput("Search knowledge base for VPN setup")}
+                            className="quick-action-btn"
+                            disabled={loading}
+                        >
+                            <span className="text-lg">🔍</span>
+                            <span className="text-xs">Search KB</span>
+                        </button>
+                        <button
+                            onClick={() => setInput("Start printer troubleshooting")}
+                            className="quick-action-btn"
+                            disabled={loading}
+                        >
+                            <span className="text-lg">🖨️</span>
+                            <span className="text-xs">Printer Help</span>
+                        </button>
+                        <button
+                            onClick={() => setInput("Show helpdesk statistics")}
+                            className="quick-action-btn"
+                            disabled={loading}
+                        >
+                            <span className="text-lg">📊</span>
+                            <span className="text-xs">Statistics</span>
+                        </button>
+                        <button
+                            onClick={() => setInput("How to reset password? Also help with VPN setup")}
+                            className="quick-action-btn"
+                            disabled={loading}
+                        >
+                            <span className="text-lg">📦</span>
+                            <span className="text-xs">Multi-Query</span>
+                        </button>
+                    </div>
+                </div>
+
                 {/* Input area with improved design */}
                 <div className="glass rounded-2xl p-4 shadow-2xl">
                     <div className="flex gap-4">
@@ -184,20 +282,51 @@ export default function App() {
                     </div>
                 </div>
 
-                {/* Enhanced footer with tips */}
+                {/* Enhanced footer with tips and audio controls */}
                 <footer className="glass rounded-xl p-4 shadow-lg">
-                    <div className="flex items-center gap-3 text-blue-200">
-                        <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                            </svg>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-blue-200">
+                            <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium">✅ Enhanced IT Helpdesk Features:</p>
+                                <p className="text-xs opacity-75">ChromaDB Knowledge Base • OpenAI SDK • HuggingFace TTS • Context Memory • Smart Troubleshooting</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium">🚀 Enhanced Features Active:</p>
-                            <p className="text-xs opacity-75">Smart troubleshooting • Context memory • Batch questions • Auto-categorized tickets • Knowledge base search • Voice responses</p>
-                        </div>
+
+                        {/* Audio Controls */}
+                        {audioData && (
+                            <div className="flex items-center gap-2 text-blue-200">
+                                {audioData.success ? (
+                                    <div className="flex items-center gap-2 bg-green-500/20 rounded-lg px-3 py-1">
+                                        <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M8.5 12H4a1 1 0 00-1 1v4a1 1 0 001 1h4.5l5 4V8l-5 4z" />
+                                        </svg>
+                                        <span className="text-xs">Voice Ready</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 bg-yellow-500/20 rounded-lg px-3 py-1">
+                                        <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                        </svg>
+                                        <span className="text-xs">TTS Loading</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </footer>
+
+                {/* Hidden audio element for voice playback */}
+                <audio
+                    ref={audioRef}
+                    onPlay={() => setIsAudioPlaying(true)}
+                    onEnded={() => setIsAudioPlaying(false)}
+                    onError={() => setIsAudioPlaying(false)}
+                />
             </div>
         </div>
     );

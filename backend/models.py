@@ -26,6 +26,7 @@ class ChatResponse(BaseModel):
     stats: Optional[Dict[str, Any]] = None  # Enhanced ticket statistics
     context: Optional[Dict[str, Any]] = None  # Conversation context info
     audio: Optional[Dict[str, Any]] = None  # Voice response data
+    audio: Optional[Dict[str, Any]] = None  # Voice response data
 
 
 class ToolCallResult(BaseModel):

@@ -29,18 +29,22 @@ except ImportError:
 def search_chromadb_knowledge(query: str, collection: str = None) -> str:
     """Search ChromaDB knowledge base for relevant IT information"""
     if not CHROMADB_AVAILABLE:
-        return "ChromaDB knowledge base is not available. Using legacy search instead."
+        # Fallback to legacy knowledge base if ChromaDB is not available
+        return search_knowledge_base_articles(query, 3)
 
     try:
         context = query_it_knowledge(query, collection)
 
-        if "No relevant knowledge found" in context:
-            return f"No relevant information found in the knowledge base for '{query}'. Would you like me to search our FAQ database or create a support ticket?"
+        if "No relevant knowledge found" in context or "Error accessing" in context:
+            # Fallback to legacy search if ChromaDB fails
+            return search_knowledge_base_articles(query, 3)
 
         return context + "\n\n💡 This information comes from our comprehensive IT knowledge base. Would you like more specific details about any of these topics?"
 
     except Exception as e:
-        return f"Error accessing knowledge base: {str(e)}. Please try a different search or contact IT support."
+        # Fallback to legacy search on any error
+        print(f"ChromaDB error, using fallback: {e}")
+        return search_knowledge_base_articles(query, 3)
 
 
 def search_knowledge_base_articles(query: str, max_results: int = 3) -> str:
