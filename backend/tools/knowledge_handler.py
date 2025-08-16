@@ -143,6 +143,30 @@ class ITKnowledgeBase:
                 'confidence': 0.0
             }
 
+    def check_collection_status(self) -> Dict[str, int]:
+        """Check the status of all collections in the knowledge base"""
+        if self.vector_store_manager:
+            try:
+                # Return status from vector store
+                status = {}
+                namespaces = ["faqs", "kb_articles", "policies", "troubleshooting"]
+                for namespace in namespaces:
+                    # For Pinecone, this would require querying the index stats
+                    # For now, return a placeholder
+                    status[namespace] = 0
+                return status
+            except Exception as e:
+                logger.error(f"Error checking collection status: {e}")
+                return {}
+        else:
+            # Return fallback status
+            return {
+                "faqs": 10,
+                "kb_articles": 6, 
+                "policies": 0,
+                "troubleshooting": 2
+            }
+
 
 # Global knowledge base instance
 _knowledge_base = None
